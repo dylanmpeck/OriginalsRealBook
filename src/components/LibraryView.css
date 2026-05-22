@@ -1,0 +1,166 @@
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.library-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.library-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+}
+
+.btn-upload {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.btn-upload:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-upload:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upload-error {
+  color: var(--accent);
+  font-size: 0.875rem;
+}
+
+.library-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  padding: 40px 0;
+  justify-content: center;
+}
+
+.library-empty {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 100px;
+}
+
+.chart-card:hover:not(.loading) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.chart-card.loading {
+  cursor: default;
+  justify-content: center;
+  align-items: center;
+}
+
+.card-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-composer {
+  font-size: 0.8rem;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-filename {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 4px;
+}
+
+.btn-delete {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.chart-card:hover .btn-delete {
+  opacity: 1;
+}
+
+.btn-delete:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 600px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-delete {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,57 @@
+.chart-viewer {
+  background: #fff;
+  border-radius: 12px;
+  min-height: 400px;
+  position: relative;
+  box-shadow: var(--shadow);
+  overflow-x: auto;
+}
+
+.chart-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.chart-status.error {
+  color: #c0392b;
+  text-align: center;
+  padding: 24px;
+}
+
+.error-detail {
+  font-size: 0.8rem;
+  color: #999;
+  max-width: 480px;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e0e0e0;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.osmd-container {
+  padding: 24px;
+}
+
+.osmd-container svg {
+  /* On desktop: scale down to fit the container if the render width exceeded it.
+     On mobile: min-width keeps notes readable; .chart-viewer scrolls horizontally. */
+  width: 100% !important;
+  min-width: 900px;
+  height: auto !important;
+}

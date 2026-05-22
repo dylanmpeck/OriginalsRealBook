@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAllowed() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email));
+    }
+
+    // Shared chart library — any allowlisted user can read/write
+    match /charts/{chartId} {
+      allow read, write: if isAllowed();
+    }
+
+    // Users can only read their own allowedUsers doc to check access
+    // Write is disabled — manage this collection from the Firebase console
+    match /allowedUsers/{email} {
+      allow read: if request.auth != null && request.auth.token.email == email;
+      allow write: if false;
+    }
+  }
+}
