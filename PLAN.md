@@ -29,19 +29,29 @@
 - [x] 6/9 chords render as "6/9" (OSMD hardcodes "69"; patched via `EngravingRules.renameChord`)
 - [x] Maj7♭5 chords render correctly (was "(alt b5)"; patched via `EngravingRules.addChordName`)
 
+### Auth
+- [x] Firebase Auth with Google sign-in
+- [x] Email allowlist enforced via Firestore (`allowedUsers` collection)
+- [x] Loading / unauthenticated / unauthorized / authorized states in `App`
+- [x] Sign-out button in header
+
+### Cloud storage & library
+- [x] Charts stored in Firebase Cloud Storage (`charts/` prefix) and indexed in Firestore
+- [x] Title and composer parsed from MusicXML `<work-title>` / `<creator>` on upload
+- [x] Library view — card grid showing title, composer, and filename
+- [x] Open chart from library (fetches XML blob from Storage, hands off to OSMD viewer)
+- [x] Delete chart (removes Firestore doc + Storage object)
+- [x] Real-time library updates via Firestore `onSnapshot`
+
 ---
 
 ## TODO
 
-### Chart library
-- [ ] Persist uploaded charts in `localStorage` (name + XML content)
-- [ ] Library view — grid or list of saved charts with title and composer
-- [ ] Delete / rename charts
+### Chart library polish
+- [x] Filter/search library by title or composer (client-side, real-time)
 - [ ] Import multiple files at once
-
-### Search
-- [ ] Parse title and composer from MusicXML `<work-title>` / `<creator>` on upload
-- [ ] Filter/search library by title, composer, or key
+- [ ] Rename charts
+- [ ] Filter by key
 
 ### Playback
 - [ ] Extract chord symbols and their beat positions from the parsed MusicXML

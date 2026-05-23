@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { User } from 'firebase/auth'
-import { subscribeToCharts, uploadChart, deleteChart, getChartXml, type ChartDoc } from '../lib/charts'
+import { subscribeToCharts, uploadChart, deleteChart, getChartXml, parseChartMeta, type ChartDoc } from '../lib/charts'
 import { extractXmlFromMxl } from '../utils/mxlExtract'
 import type { Chart } from '../App'
 import './LibraryView.css'
@@ -16,7 +16,16 @@ export default function LibraryView({ user, onOpen }: Props) {
   const [uploading, setUploading] = useState(false)
   const [opening, setOpening] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [pending, setPending] = useState<{ file: File; xmlContent: string; title: string; composer: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const filtered = searchQuery.trim()
+    ? charts.filter(c => {
+        const q = searchQuery.toLowerCase()
+        return c.title.toLowerCase().includes(q) || c.composer.toLowerCase().includes(q)
+      })
+    : charts
 
   useEffect(() => {
     const unsub = subscribeToCharts(data => {
@@ -33,12 +42,26 @@ export default function LibraryView({ user, onOpen }: Props) {
       return
     }
     setUploadError(null)
-    setUploading(true)
     try {
       const xmlContent = file.name.toLowerCase().endsWith('.mxl')
         ? await extractXmlFromMxl(file)
         : await file.text()
-      await uploadChart(file, xmlContent, user.uid)
+      const { title, composer } = parseChartMeta(xmlContent)
+      setPending({ file, xmlContent, title, composer })
+    } catch (err) {
+      setUploadError(`Failed to read file: ${(err as Error).message}`)
+    }
+  }
+
+  async function confirmUpload() {
+    if (!pending) return
+    setUploading(true)
+    setPending(null)
+    try {
+      await uploadChart(pending.file, pending.xmlContent, user.uid, {
+        title: pending.title,
+        composer: pending.composer,
+      })
     } catch (err) {
       setUploadError(`Upload failed: ${(err as Error).message}`)
     } finally {
@@ -94,6 +117,16 @@ export default function LibraryView({ user, onOpen }: Props) {
 
       {uploadError && <p className="upload-error">{uploadError}</p>}
 
+      {!listLoading && charts.length > 0 && (
+        <input
+          className="library-search"
+          type="search"
+          placeholder="Search by title or composer…"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+        />
+      )}
+
       {listLoading ? (
         <div className="library-status">
           <div className="spinner" />
@@ -104,9 +137,13 @@ export default function LibraryView({ user, onOpen }: Props) {
           <p>No charts yet.</p>
           <p>Upload a MusicXML file to get started.</p>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="library-empty">
+          <p>No charts match "{searchQuery}".</p>
+        </div>
       ) : (
         <div className="chart-grid">
-          {charts.map(c => (
+          {filtered.map(c => (
             <div
               key={c.id}
               className={`chart-card${opening === c.id ? ' loading' : ''}`}
@@ -133,6 +170,40 @@ export default function LibraryView({ user, onOpen }: Props) {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {pending && (
+        <div className="upload-modal-backdrop" onClick={() => setPending(null)}>
+          <div className="upload-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">Confirm chart details</h3>
+            <p className="modal-filename">{pending.file.name}</p>
+            <label className="modal-label">
+              Title
+              <input
+                className="modal-input"
+                type="text"
+                value={pending.title}
+                onChange={e => setPending(p => p && { ...p, title: e.target.value })}
+                placeholder="Untitled"
+                autoFocus
+              />
+            </label>
+            <label className="modal-label">
+              Composer
+              <input
+                className="modal-input"
+                type="text"
+                value={pending.composer}
+                onChange={e => setPending(p => p && { ...p, composer: e.target.value })}
+                placeholder="Unknown"
+              />
+            </label>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setPending(null)}>Cancel</button>
+              <button className="btn-upload" onClick={confirmUpload}>Upload</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

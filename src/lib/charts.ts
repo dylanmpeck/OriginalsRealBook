@@ -15,24 +15,28 @@ export interface ChartDoc {
   uploadedBy: string
 }
 
-function parseChartMeta(xml: string): { title: string; composer: string } {
+export function parseChartMeta(xml: string): { title: string; composer: string } {
   const domDoc = new DOMParser().parseFromString(xml, 'text/xml')
   const title =
     domDoc.querySelector('work-title')?.textContent?.trim() ||
     domDoc.querySelector('movement-title')?.textContent?.trim() ||
-    'Untitled'
+    ''
   const composer =
     domDoc.querySelector('creator[type="composer"]')?.textContent?.trim() || ''
   return { title, composer }
 }
 
-export async function uploadChart(file: File, xmlContent: string, uid: string): Promise<void> {
-  const { title, composer } = parseChartMeta(xmlContent)
+export async function uploadChart(
+  file: File,
+  xmlContent: string,
+  uid: string,
+  meta: { title: string; composer: string },
+): Promise<void> {
   const storageRef = ref(storage, `charts/${Date.now()}_${file.name}`)
   await uploadBytes(storageRef, new Blob([xmlContent], { type: 'application/xml' }))
   await addDoc(collection(db, 'charts'), {
-    title,
-    composer,
+    title: meta.title || file.name,
+    composer: meta.composer,
     filename: file.name,
     storagePath: storageRef.fullPath,
     uploadedAt: Timestamp.now(),
