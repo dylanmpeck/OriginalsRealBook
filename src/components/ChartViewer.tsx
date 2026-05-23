@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay'
 import type { Chart } from '../App'
+import { transposeXml, getKeyFifths } from '../utils/transposeXml'
+import TransposeControl from './TransposeControl'
 import './ChartViewer.css'
 
 const OSMD_OPTIONS = {
@@ -18,10 +20,7 @@ const OSMD_OPTIONS = {
 function applyChordFixes(osmd: OpenSheetMusicDisplay): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rules = osmd.EngravingRules as any
-  // OSMD hardcodes 6/9 as "69" in resetChordNames(); rename it.
   rules.renameChord?.('69', '6/9')
-  // OSMD has no entry for major-seventh + altered b5, falling back to "(alt b5)".
-  // "b5" must use ASCII "b" to match OSMD's internal accidental text (resetChordAccidentalTexts default).
   rules.addChordName?.('Maj7♭5', 'majorseventh', [], ['b5'], [])
 }
 
@@ -48,33 +47,37 @@ export default function ChartViewer({ chart }: Props) {
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [errorMsg, setErrorMsg] = useState('')
+  const [transpose, setTranspose] = useState(0)
+
+  const originalFifths = getKeyFifths(chart.xmlContent)
+
+  // Reset transpose when chart changes
+  useEffect(() => {
+    setTranspose(0)
+  }, [chart])
 
   useEffect(() => {
     if (!containerRef.current) return
     setStatus('loading')
     setErrorMsg('')
 
-    containerRef.current.innerHTML = ''
-    osmdRef.current = new OpenSheetMusicDisplay(containerRef.current, OSMD_OPTIONS)
-    applyChordFixes(osmdRef.current)
+    const xml = transposeXml(chart.xmlContent, transpose)
 
-    osmdRef.current
-      .load(chart.xmlContent)
+    containerRef.current.innerHTML = ''
+    const osmd = new OpenSheetMusicDisplay(containerRef.current, OSMD_OPTIONS)
+    osmdRef.current = osmd
+    applyChordFixes(osmd)
+
+    osmd
+      .load(xml)
       .then(() => {
+        if (osmdRef.current !== osmd) return
+
         const container = containerRef.current!
-        const osmd = osmdRef.current!
-        const expectedSystems = countXmlSystems(chart.xmlContent)
+        const expectedSystems = countXmlSystems(xml)
         const MAX_WIDTH = 5000
-        // 900px is the minimum width where staff notation stays readable.
-        // On mobile the container is narrower, so we start here and let the
-        // score scroll horizontally rather than shrink below legibility.
         const MIN_READABLE = 900
 
-        // Start at the container's natural width (floored at MIN_READABLE) and
-        // widen until OSMD's automatic line-breaking no longer adds systems
-        // beyond what the XML specifies. This finds the smallest render width
-        // that preserves the author's layout, minimising the CSS scale-down
-        // and keeping notes as large as possible.
         let renderWidth = Math.max(container.offsetWidth, MIN_READABLE)
         while (true) {
           container.style.width = `${renderWidth}px`
@@ -84,8 +87,6 @@ export default function ChartViewer({ chart }: Props) {
           renderWidth = Math.min(Math.ceil(renderWidth * 1.3), MAX_WIDTH)
         }
 
-        // Release the pinned width — CSS (svg { width: 100% }) scales the SVG
-        // to fit the visible container while the viewBox preserves proportions.
         container.style.width = ''
         setStatus('ready')
       })
@@ -98,10 +99,17 @@ export default function ChartViewer({ chart }: Props) {
       if (containerRef.current) containerRef.current.innerHTML = ''
       osmdRef.current = null
     }
-  }, [chart])
+  }, [chart, transpose])
 
   return (
     <div className="chart-viewer">
+      {status === 'ready' && (
+        <TransposeControl
+          originalFifths={originalFifths}
+          transpose={transpose}
+          onChange={setTranspose}
+        />
+      )}
       {status === 'loading' && (
         <div className="chart-status">
           <div className="spinner" />
