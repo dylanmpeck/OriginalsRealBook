@@ -21,7 +21,7 @@ export default function AuthGate() {
   return (
     <div className="auth-gate">
       <div className="auth-card">
-        <h1 className="auth-logo">iRealB</h1>
+        <h1 className="auth-logo">Originals Jam Group</h1>
         <p className="auth-subtitle">Chart Viewer</p>
         <button className="btn-google" onClick={handleSignIn} disabled={loading}>
           <svg className="google-icon" viewBox="0 0 24 24" aria-hidden="true">

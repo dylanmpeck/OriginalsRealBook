@@ -32,7 +32,7 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-inner">
-          <h1 className="logo">iRealB</h1>
+          <h1 className="logo">Originals Jam Group</h1>
           <span className="logo-sub">Chart Viewer</span>
         </div>
         {user && (
