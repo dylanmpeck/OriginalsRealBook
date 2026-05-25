@@ -99,8 +99,25 @@ export default function ChartViewer({ chart }: Props) {
   const [errorMsg, setErrorMsg] = useState('')
   const [transpose, setTranspose] = useState(0)
 
+  const viewerRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
+  function toggleFullscreen() {
+    if (!viewerRef.current) return
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      viewerRef.current.requestFullscreen()
+    }
+  }
 
   const isXml = selectedType === 'musicxml'
 
@@ -188,8 +205,33 @@ export default function ChartViewer({ chart }: Props) {
   const originalFifths = xmlContent ? getKeyFifths(xmlContent) : 0
   const keysForType = formatsOfType.map(f => (f.key ?? 'C') as ChartKey)
 
+  const fullscreenBtn = (
+    <button
+      className="btn-fullscreen"
+      onClick={toggleFullscreen}
+      title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+      aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+    >
+      {isFullscreen ? (
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="4 14 10 14 10 20"/>
+          <polyline points="20 10 14 10 14 4"/>
+          <line x1="10" y1="14" x2="3" y2="21"/>
+          <line x1="21" y1="3" x2="14" y2="10"/>
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 3 21 3 21 9"/>
+          <polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/>
+          <line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      )}
+    </button>
+  )
+
   return (
-    <div className="chart-viewer">
+    <div className="chart-viewer" ref={viewerRef}>
       {availableTypes.length > 1 && (
         <div className="format-tabs">
           {availableTypes.map(type => (
@@ -211,6 +253,7 @@ export default function ChartViewer({ chart }: Props) {
             transpose={transpose}
             onChange={setTranspose}
           />
+          {fullscreenBtn}
         </div>
       ) : (
         <div className="media-tools">
@@ -226,6 +269,7 @@ export default function ChartViewer({ chart }: Props) {
               </button>
             ))}
           </div>
+          {fullscreenBtn}
         </div>
       )}
 

@@ -45,16 +45,47 @@
 }
 
 .xml-tools {
-  /* TransposeControl has its own dark-bar styles; this wrapper just provides semantic grouping */
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+.xml-tools .transpose-control {
+  flex: 1;
+  border-bottom: none;
 }
 
 .media-tools {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 14px;
+  padding: 6px 0 6px 14px;
   background: #1a1a2e;
   border-bottom: 1px solid #2a2a4a;
+}
+
+.btn-fullscreen {
+  background: #1a1a2e;
+  border: none;
+  border-left: 1px solid #2a2a4a;
+  color: #8888aa;
+  padding: 0 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: stretch;
+  transition: color 0.15s, background 0.15s;
+}
+
+.btn-fullscreen:hover {
+  color: #e0e0ff;
+  background: #22224a;
+}
+
+.media-tools .btn-fullscreen {
+  margin-left: auto;
 }
 
 .media-tools-label {
@@ -168,4 +199,25 @@
   height: auto !important;
   background: #fff;
   color-scheme: only light;
+}
+
+/* Fullscreen mode */
+.chart-viewer:fullscreen {
+  border-radius: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-shadow: none;
+}
+
+.chart-viewer:fullscreen .pdf-viewer {
+  height: calc(100vh - 37px);
+  min-height: unset;
+}
+
+.chart-viewer:fullscreen .image-viewer {
+  min-height: calc(100vh - 37px);
+}
+
+.chart-viewer:fullscreen .osmd-container svg {
+  min-width: unset;
 }
