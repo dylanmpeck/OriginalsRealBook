@@ -143,3 +143,21 @@ export async function deleteChart(chart: ChartDoc): Promise<void> {
     )
   )
 }
+
+export async function deleteFormat(chart: ChartDoc, format: ChartFormat): Promise<void> {
+  const remaining = chart.formats.filter(f => f.storagePath !== format.storagePath)
+  if (remaining.length === 0) {
+    await deleteChart(chart)
+    return
+  }
+  await updateDoc(doc(db, 'charts', chart.id), {
+    formats: remaining.map(f => ({
+      type: f.type,
+      filename: f.filename,
+      storagePath: f.storagePath,
+      uploadedAt: Timestamp.fromDate(f.uploadedAt),
+      ...(f.key !== undefined && { key: f.key }),
+    })),
+  })
+  await deleteObject(ref(storage, format.storagePath)).catch(() => {})
+}

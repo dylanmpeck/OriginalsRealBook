@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { User } from 'firebase/auth'
 import {
-  subscribeToCharts, uploadChart, addFormatToChart, deleteChart,
+  subscribeToCharts, uploadChart, addFormatToChart, deleteChart, deleteFormat,
   parseChartMeta, type ChartDoc, type ChartFormat, type FormatType, type UploadFormat, type ChartKey,
 } from '../lib/charts'
 import { extractXmlFromMxl } from '../utils/mxlExtract'
@@ -33,14 +33,6 @@ function keyLabel(key: ChartKey): string {
   return key.replace('b', '♭')
 }
 
-function groupFormatsByType(formats: ChartFormat[]): Array<{ type: FormatType; keys: ChartKey[] }> {
-  const map = new Map<FormatType, ChartKey[]>()
-  for (const f of formats) {
-    if (!map.has(f.type)) map.set(f.type, [])
-    if (f.key) map.get(f.type)!.push(f.key)
-  }
-  return [...map.entries()].map(([type, keys]) => ({ type, keys }))
-}
 
 export default function LibraryView({ user, onOpen }: Props) {
   const [charts, setCharts] = useState<ChartDoc[]>([])
@@ -140,6 +132,20 @@ export default function LibraryView({ user, onOpen }: Props) {
     }
   }
 
+  async function handleDeleteFormat(c: ChartDoc, f: ChartFormat, e: React.MouseEvent) {
+    e.stopPropagation()
+    const label = `${formatLabel(f.type)}${f.key ? ` (${keyLabel(f.key)})` : ''}`
+    const msg = c.formats.length === 1
+      ? `Delete the ${label} version? This is the only version — the chart will be removed entirely.`
+      : `Delete the ${label} version?`
+    if (!confirm(msg)) return
+    try {
+      await deleteFormat(c, f)
+    } catch (err) {
+      console.error('Failed to delete format', err)
+    }
+  }
+
   return (
     <div className="library">
       <div className="library-header">
@@ -202,9 +208,17 @@ export default function LibraryView({ user, onOpen }: Props) {
                 <p className="card-title">{c.title}</p>
                 {c.composer && <p className="card-composer">{c.composer}</p>}
                 <div className="card-formats">
-                  {groupFormatsByType(c.formats).map(({ type, keys }) => (
-                    <span key={type} className={`format-badge format-badge-${type}`}>
-                      {formatLabel(type)}{keys.length > 0 ? ` · ${keys.map(keyLabel).join(' ')}` : ''}
+                  {c.formats.map(f => (
+                    <span key={f.storagePath} className={`format-badge format-badge-${f.type}`}>
+                      {formatLabel(f.type)}{f.key ? ` · ${keyLabel(f.key)}` : ''}
+                      <button
+                        className="btn-delete-format"
+                        onClick={e => handleDeleteFormat(c, f, e)}
+                        title={`Delete ${formatLabel(f.type)}${f.key ? ` (${keyLabel(f.key)})` : ''} version`}
+                        aria-label="Delete this version"
+                      >
+                        ×
+                      </button>
                     </span>
                   ))}
                 </div>
