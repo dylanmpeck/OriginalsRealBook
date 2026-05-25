@@ -4,25 +4,21 @@ import { onAuthChange, isUserAllowed, signOut } from './lib/auth'
 import AuthGate from './components/AuthGate'
 import LibraryView from './components/LibraryView'
 import ChartViewer from './components/ChartViewer'
+import type { ChartDoc } from './lib/charts'
 import './App.css'
-
-export interface Chart {
-  name: string
-  xmlContent: string
-}
 
 type AuthStatus = 'loading' | 'unauthenticated' | 'unauthorized' | 'authorized'
 
 export default function App() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>('loading')
   const [user, setUser] = useState<User | null>(null)
-  const [chart, setChart] = useState<Chart | null>(null)
+  const [openChart, setOpenChart] = useState<ChartDoc | null>(null)
 
   useEffect(() => {
     return onAuthChange(async u => {
       if (!u) {
         setUser(null)
-        setChart(null)
+        setOpenChart(null)
         setAuthStatus('unauthenticated')
         return
       }
@@ -64,17 +60,17 @@ export default function App() {
           </div>
         )}
 
-        {authStatus === 'authorized' && user && !chart && (
-          <LibraryView user={user} onOpen={setChart} />
+        {authStatus === 'authorized' && user && !openChart && (
+          <LibraryView user={user} onOpen={setOpenChart} />
         )}
 
-        {authStatus === 'authorized' && chart && (
+        {authStatus === 'authorized' && openChart && (
           <div className="viewer-layout">
             <div className="viewer-toolbar">
-              <button className="btn-back" onClick={() => setChart(null)}>← Library</button>
-              <span className="chart-title">{chart.name}</span>
+              <button className="btn-back" onClick={() => setOpenChart(null)}>← Library</button>
+              <span className="chart-title">{openChart.title}</span>
             </div>
-            <ChartViewer chart={chart} />
+            <ChartViewer key={openChart.id} chart={openChart} />
           </div>
         )}
       </main>

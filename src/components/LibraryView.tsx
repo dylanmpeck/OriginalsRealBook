@@ -1,23 +1,54 @@
 import { useEffect, useRef, useState } from 'react'
 import type { User } from 'firebase/auth'
-import { subscribeToCharts, uploadChart, deleteChart, getChartXml, parseChartMeta, type ChartDoc } from '../lib/charts'
+import {
+  subscribeToCharts, uploadChart, addFormatToChart, deleteChart,
+  parseChartMeta, type ChartDoc, type ChartFormat, type FormatType, type UploadFormat, type ChartKey,
+} from '../lib/charts'
 import { extractXmlFromMxl } from '../utils/mxlExtract'
-import type { Chart } from '../App'
 import './LibraryView.css'
 
 interface Props {
   user: User
-  onOpen: (chart: Chart) => void
+  onOpen: (chart: ChartDoc) => void
+}
+
+const CHART_KEYS: ChartKey[] = ['C', 'Bb', 'Eb']
+
+interface PendingUpload {
+  file: File
+  extractedXml?: string
+  formatType: FormatType
+  title: string
+  composer: string
+  matchingChart: ChartDoc | null
+  addToExisting: boolean
+  key: ChartKey
+}
+
+function formatLabel(type: FormatType): string {
+  return type === 'musicxml' ? 'MusicXML' : type === 'pdf' ? 'PDF' : 'Image'
+}
+
+function keyLabel(key: ChartKey): string {
+  return key.replace('b', '♭')
+}
+
+function groupFormatsByType(formats: ChartFormat[]): Array<{ type: FormatType; keys: ChartKey[] }> {
+  const map = new Map<FormatType, ChartKey[]>()
+  for (const f of formats) {
+    if (!map.has(f.type)) map.set(f.type, [])
+    if (f.key) map.get(f.type)!.push(f.key)
+  }
+  return [...map.entries()].map(([type, keys]) => ({ type, keys }))
 }
 
 export default function LibraryView({ user, onOpen }: Props) {
   const [charts, setCharts] = useState<ChartDoc[]>([])
   const [listLoading, setListLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
-  const [opening, setOpening] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [pending, setPending] = useState<{ file: File; xmlContent: string; title: string; composer: string } | null>(null)
+  const [pending, setPending] = useState<PendingUpload | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const filtered = searchQuery.trim()
@@ -36,18 +67,40 @@ export default function LibraryView({ user, onOpen }: Props) {
   }, [])
 
   async function handleFile(file: File) {
-    const validExts = ['.xml', '.musicxml', '.mxl']
-    if (!validExts.some(ext => file.name.toLowerCase().endsWith(ext))) {
-      setUploadError('Please upload a .xml, .musicxml, or .mxl file.')
+    const lower = file.name.toLowerCase()
+    const isXml = ['.xml', '.musicxml', '.mxl'].some(ext => lower.endsWith(ext))
+    const isPdf = lower.endsWith('.pdf')
+    const isImage = ['.png', '.jpg', '.jpeg', '.gif', '.webp'].some(ext => lower.endsWith(ext))
+
+    if (!isXml && !isPdf && !isImage) {
+      setUploadError('Please upload a .xml, .musicxml, .mxl, .pdf, or image file.')
       return
     }
     setUploadError(null)
+
+    let extractedXml: string | undefined
+    let title = ''
+    let composer = ''
+    let formatType: FormatType
+
     try {
-      const xmlContent = file.name.toLowerCase().endsWith('.mxl')
-        ? await extractXmlFromMxl(file)
-        : await file.text()
-      const { title, composer } = parseChartMeta(xmlContent)
-      setPending({ file, xmlContent, title, composer })
+      if (isXml) {
+        extractedXml = lower.endsWith('.mxl')
+          ? await extractXmlFromMxl(file)
+          : await file.text()
+        const meta = parseChartMeta(extractedXml)
+        title = meta.title
+        composer = meta.composer
+        formatType = 'musicxml'
+      } else {
+        formatType = isPdf ? 'pdf' : 'image'
+      }
+
+      const matchingChart = title
+        ? charts.find(c => c.title.toLowerCase() === title.toLowerCase()) ?? null
+        : null
+
+      setPending({ file, extractedXml, formatType, title, composer, matchingChart, addToExisting: matchingChart !== null, key: 'C' })
     } catch (err) {
       setUploadError(`Failed to read file: ${(err as Error).message}`)
     }
@@ -56,12 +109,20 @@ export default function LibraryView({ user, onOpen }: Props) {
   async function confirmUpload() {
     if (!pending) return
     setUploading(true)
+    const { file, extractedXml, formatType, title, composer, matchingChart, addToExisting, key } = pending
     setPending(null)
     try {
-      await uploadChart(pending.file, pending.xmlContent, user.uid, {
-        title: pending.title,
-        composer: pending.composer,
-      })
+      const format: UploadFormat = {
+        type: formatType,
+        file,
+        extractedXml,
+        ...(formatType !== 'musicxml' && { key }),
+      }
+      if (addToExisting && matchingChart) {
+        await addFormatToChart(matchingChart.id, format)
+      } else {
+        await uploadChart(user.uid, { title, composer }, format)
+      }
     } catch (err) {
       setUploadError(`Upload failed: ${(err as Error).message}`)
     } finally {
@@ -69,23 +130,11 @@ export default function LibraryView({ user, onOpen }: Props) {
     }
   }
 
-  async function handleOpen(c: ChartDoc) {
-    setOpening(c.id)
-    try {
-      const xmlContent = await getChartXml(c.storagePath)
-      onOpen({ name: c.title || c.filename, xmlContent })
-    } catch (err) {
-      console.error('Failed to load chart', err)
-    } finally {
-      setOpening(null)
-    }
-  }
-
   async function handleDelete(c: ChartDoc, e: React.MouseEvent) {
     e.stopPropagation()
-    if (!confirm(`Delete "${c.title || c.filename}"?`)) return
+    if (!confirm(`Delete "${c.title}"?`)) return
     try {
-      await deleteChart(c.id, c.storagePath)
+      await deleteChart(c)
     } catch (err) {
       console.error('Failed to delete chart', err)
     }
@@ -105,7 +154,7 @@ export default function LibraryView({ user, onOpen }: Props) {
         <input
           ref={inputRef}
           type="file"
-          accept=".xml,.musicxml,.mxl"
+          accept=".xml,.musicxml,.mxl,.pdf,.png,.jpg,.jpeg,.gif,.webp"
           style={{ display: 'none' }}
           onChange={e => {
             const f = e.target.files?.[0]
@@ -135,7 +184,7 @@ export default function LibraryView({ user, onOpen }: Props) {
       ) : charts.length === 0 ? (
         <div className="library-empty">
           <p>No charts yet.</p>
-          <p>Upload a MusicXML file to get started.</p>
+          <p>Upload a MusicXML, PDF, or image file to get started.</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="library-empty">
@@ -146,28 +195,28 @@ export default function LibraryView({ user, onOpen }: Props) {
           {filtered.map(c => (
             <div
               key={c.id}
-              className={`chart-card${opening === c.id ? ' loading' : ''}`}
-              onClick={() => opening ? undefined : handleOpen(c)}
+              className="chart-card"
+              onClick={() => onOpen(c)}
             >
-              {opening === c.id ? (
-                <div className="card-loading"><div className="spinner" /></div>
-              ) : (
-                <>
-                  <div className="card-body">
-                    <p className="card-title">{c.title || c.filename}</p>
-                    {c.composer && <p className="card-composer">{c.composer}</p>}
-                    <p className="card-filename">{c.filename}</p>
-                  </div>
-                  <button
-                    className="btn-delete"
-                    onClick={e => handleDelete(c, e)}
-                    title="Delete chart"
-                    aria-label="Delete chart"
-                  >
-                    ×
-                  </button>
-                </>
-              )}
+              <div className="card-body">
+                <p className="card-title">{c.title}</p>
+                {c.composer && <p className="card-composer">{c.composer}</p>}
+                <div className="card-formats">
+                  {groupFormatsByType(c.formats).map(({ type, keys }) => (
+                    <span key={type} className={`format-badge format-badge-${type}`}>
+                      {formatLabel(type)}{keys.length > 0 ? ` · ${keys.map(keyLabel).join(' ')}` : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <button
+                className="btn-delete"
+                onClick={e => handleDelete(c, e)}
+                title="Delete chart"
+                aria-label="Delete chart"
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
@@ -178,27 +227,83 @@ export default function LibraryView({ user, onOpen }: Props) {
           <div className="upload-modal" onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">Confirm chart details</h3>
             <p className="modal-filename">{pending.file.name}</p>
-            <label className="modal-label">
-              Title
-              <input
-                className="modal-input"
-                type="text"
-                value={pending.title}
-                onChange={e => setPending(p => p && { ...p, title: e.target.value })}
-                placeholder="Untitled"
-                autoFocus
-              />
-            </label>
-            <label className="modal-label">
-              Composer
-              <input
-                className="modal-input"
-                type="text"
-                value={pending.composer}
-                onChange={e => setPending(p => p && { ...p, composer: e.target.value })}
-                placeholder="Unknown"
-              />
-            </label>
+
+            {pending.matchingChart && (
+              <div className="modal-existing-notice">
+                <p>A chart named <strong>"{pending.matchingChart.title}"</strong> already exists.</p>
+                <div className="modal-existing-options">
+                  <label className="modal-radio-label">
+                    <input
+                      type="radio"
+                      name="upload-mode"
+                      checked={pending.addToExisting}
+                      onChange={() => setPending(p => p && { ...p, addToExisting: true })}
+                    />
+                    Add {formatLabel(pending.formatType)} to existing chart
+                  </label>
+                  <label className="modal-radio-label">
+                    <input
+                      type="radio"
+                      name="upload-mode"
+                      checked={!pending.addToExisting}
+                      onChange={() => setPending(p => p && { ...p, addToExisting: false })}
+                    />
+                    Create as new chart
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {!pending.addToExisting && (
+              <>
+                <label className="modal-label">
+                  Title
+                  <input
+                    className="modal-input"
+                    type="text"
+                    value={pending.title}
+                    onChange={e => {
+                      const newTitle = e.target.value
+                      const match = newTitle.trim()
+                        ? charts.find(c => c.title.toLowerCase() === newTitle.trim().toLowerCase()) ?? null
+                        : null
+                      setPending(p => p && { ...p, title: newTitle, matchingChart: match, addToExisting: match !== null })
+                    }}
+                    placeholder="Untitled"
+                    autoFocus={!pending.matchingChart}
+                  />
+                </label>
+                <label className="modal-label">
+                  Composer
+                  <input
+                    className="modal-input"
+                    type="text"
+                    value={pending.composer}
+                    onChange={e => setPending(p => p && { ...p, composer: e.target.value })}
+                    placeholder="Unknown"
+                  />
+                </label>
+              </>
+            )}
+
+            {(pending.formatType === 'pdf' || pending.formatType === 'image') && (
+              <label className="modal-label">
+                Key
+                <div className="modal-key-selector">
+                  {CHART_KEYS.map(k => (
+                    <button
+                      key={k}
+                      type="button"
+                      className={`key-btn${pending.key === k ? ' active' : ''}`}
+                      onClick={() => setPending(p => p && { ...p, key: k })}
+                    >
+                      {keyLabel(k)}
+                    </button>
+                  ))}
+                </div>
+              </label>
+            )}
+
             <div className="modal-actions">
               <button className="btn-cancel" onClick={() => setPending(null)}>Cancel</button>
               <button className="btn-upload" onClick={confirmUpload}>Upload</button>

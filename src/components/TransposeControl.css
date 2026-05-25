@@ -60,3 +60,8 @@
 .btn-transpose-reset:hover {
   color: #9999cc;
 }
+
+.transpose-control.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}

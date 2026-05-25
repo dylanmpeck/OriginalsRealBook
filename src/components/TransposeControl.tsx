@@ -5,14 +5,15 @@ interface Props {
   originalFifths: number
   transpose: number
   onChange: (semitones: number) => void
+  disabled?: boolean
 }
 
-export default function TransposeControl({ originalFifths, transpose, onChange }: Props) {
+export default function TransposeControl({ originalFifths, transpose, onChange, disabled }: Props) {
   const keyDisplay = transposedKeyName(originalFifths, transpose)
   const offsetLabel = transpose === 0 ? '±0' : transpose > 0 ? `+${transpose}` : `${transpose}`
 
   return (
-    <div className="transpose-control">
+    <div className={`transpose-control${disabled ? ' disabled' : ''}`}>
       <span className="transpose-label">Key</span>
       <span className="transpose-bound">−12</span>
       <input
@@ -21,6 +22,7 @@ export default function TransposeControl({ originalFifths, transpose, onChange }
         min={-12}
         max={12}
         value={transpose}
+        disabled={disabled}
         onChange={e => onChange(parseInt(e.target.value, 10))}
         aria-label="Transpose semitones"
       />

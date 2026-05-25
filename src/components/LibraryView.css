@@ -142,13 +142,34 @@
   text-overflow: ellipsis;
 }
 
-.card-filename {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 4px;
+.card-formats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.format-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.format-badge-musicxml {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+
+.format-badge-pdf {
+  background: color-mix(in srgb, #e07b39 15%, transparent);
+  color: #c4602a;
+}
+
+.format-badge-image {
+  background: color-mix(in srgb, #3aaa6e 15%, transparent);
+  color: #2a8a55;
 }
 
 .btn-delete {
@@ -230,6 +251,66 @@
 
 .modal-input:focus {
   border-color: var(--accent);
+}
+
+.modal-existing-notice {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.85rem;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-existing-notice p {
+  margin: 0;
+}
+
+.modal-existing-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.modal-key-selector {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.modal-key-selector .key-btn {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.modal-key-selector .key-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.modal-key-selector .key-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .modal-actions {

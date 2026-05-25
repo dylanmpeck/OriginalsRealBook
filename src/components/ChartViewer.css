@@ -44,6 +44,109 @@
   to { transform: rotate(360deg); }
 }
 
+.xml-tools {
+  /* TransposeControl has its own dark-bar styles; this wrapper just provides semantic grouping */
+}
+
+.media-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  background: #1a1a2e;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+.media-tools-label {
+  color: #8888aa;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.key-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.key-btn {
+  background: none;
+  border: 1px solid #3a3a5a;
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8888aa;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.key-btn:hover {
+  border-color: #6666cc;
+  color: #c0c0ee;
+}
+
+.key-btn.active {
+  background: #6666cc;
+  border-color: #6666cc;
+  color: #fff;
+}
+
+.format-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.format-tab {
+  background: none;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  position: relative;
+  bottom: -1px;
+}
+
+.format-tab:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.format-tab.active {
+  background: var(--bg);
+  border-color: var(--border);
+  border-bottom-color: var(--bg);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.pdf-viewer {
+  width: 100%;
+  height: 80vh;
+  min-height: 600px;
+  border: none;
+  display: block;
+}
+
+.image-viewer {
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.image-viewer img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
 .osmd-container {
   padding: 24px;
 }
