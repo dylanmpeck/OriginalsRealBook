@@ -8,6 +8,9 @@ import './ChartViewer.css'
 const OSMD_OPTIONS = {
   autoResize: false,
   backend: 'svg',
+  darkMode: false,
+  defaultColorMusic: '#000000',
+  pageBackgroundColor: '#FFFFFF',
   drawingParameters: 'default',
   drawCredits: true,
   drawPartNames: true,
@@ -161,6 +164,14 @@ export default function ChartViewer({ chart }: Props) {
         }
 
         container.style.width = ''
+
+        // Stamp inline color-scheme on every rendered SVG so Chrome's
+        // #enable-force-dark flag cannot override it (inline > author CSS > UA).
+        container.querySelectorAll('svg').forEach(svg => {
+          svg.style.colorScheme = 'only light'
+          svg.style.backgroundColor = '#ffffff'
+        })
+
         setStatus('ready')
       })
       .catch((err: unknown) => {

@@ -149,6 +149,15 @@
 
 .osmd-container {
   padding: 24px;
+  background: #fff;
+  color: #000;
+  /* "only" tells Chrome not to forcibly convert this subtree to dark mode */
+  color-scheme: only light;
+}
+
+.osmd-container > div {
+  background: #fff;
+  color-scheme: only light;
 }
 
 .osmd-container svg {
@@ -157,4 +166,6 @@
   width: 100% !important;
   min-width: 900px;
   height: auto !important;
+  background: #fff;
+  color-scheme: only light;
 }

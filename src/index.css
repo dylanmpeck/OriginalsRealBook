@@ -5,6 +5,7 @@
 }
 
 :root {
+  color-scheme: light;
   --bg: #1a1a2e;
   --surface: #16213e;
   --surface-alt: #0f3460;
