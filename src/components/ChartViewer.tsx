@@ -104,9 +104,14 @@ export default function ChartViewer({ chart }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [toolbarVisible, setToolbarVisible] = useState(true)
 
   useEffect(() => {
-    const onChange = () => setIsFullscreen(!!document.fullscreenElement)
+    const onChange = () => {
+      const fs = !!document.fullscreenElement
+      setIsFullscreen(fs)
+      if (!fs) setToolbarVisible(true)
+    }
     document.addEventListener('fullscreenchange', onChange)
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
@@ -251,57 +256,86 @@ export default function ChartViewer({ chart }: Props) {
     </button>
   )
 
+  const hideToolbarBtn = isFullscreen ? (
+    <button
+      className="btn-hide-toolbar"
+      onClick={() => setToolbarVisible(false)}
+      title="Hide controls"
+      aria-label="Hide controls"
+    >
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="18 15 12 9 6 15"/>
+      </svg>
+    </button>
+  ) : null
+
   return (
     <div className="chart-viewer" ref={viewerRef}>
-      {availableTypes.length > 1 && (
-        <div className="format-tabs">
-          {availableTypes.map(type => (
-            <button
-              key={type}
-              className={`format-tab${selectedType === type ? ' active' : ''}`}
-              onClick={() => setSelectedType(type)}
-            >
-              {formatLabel(type)}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {isXml ? (
-        <div className="xml-tools">
-          <div className="xml-tools-main">
-            <TransposeControl
-              originalFifths={originalFifths}
-              transpose={transpose}
-              onChange={setTranspose}
-            />
-            {fullscreenBtn}
-          </div>
-          <div className="zoom-controls">
-            <button className="zoom-step" onClick={zoomOut} disabled={userZoom <= ZOOM_MIN} aria-label="Zoom out">−</button>
-            <span className="zoom-pct">{Math.round(userZoom * 100)}%</span>
-            <button className="zoom-step" onClick={zoomIn} disabled={userZoom >= ZOOM_MAX} aria-label="Zoom in">+</button>
-            <div className="zoom-divider" />
-            <button className={`zoom-btn${userZoom === 1 ? ' active' : ''}`} onClick={fitWidth}>Fit Width</button>
-            <button className="zoom-btn" onClick={fitToPage} disabled={status !== 'ready'}>Fit Page</button>
-          </div>
-        </div>
-      ) : (
-        <div className="media-tools">
-          <span className="media-tools-label">Key</span>
-          <div className="key-toggle">
-            {keysForType.map(k => (
+      <div className={`viewer-controls${isFullscreen && !toolbarVisible ? ' controls-hidden' : ''}`}>
+        {availableTypes.length > 1 && (
+          <div className="format-tabs">
+            {availableTypes.map(type => (
               <button
-                key={k}
-                className={`key-btn${selectedKey === k ? ' active' : ''}`}
-                onClick={() => setSelectedKey(k)}
+                key={type}
+                className={`format-tab${selectedType === type ? ' active' : ''}`}
+                onClick={() => setSelectedType(type)}
               >
-                {keyLabel(k)}
+                {formatLabel(type)}
               </button>
             ))}
           </div>
-          {fullscreenBtn}
-        </div>
+        )}
+
+        {isXml ? (
+          <div className="xml-tools">
+            <div className="xml-tools-main">
+              <TransposeControl
+                originalFifths={originalFifths}
+                transpose={transpose}
+                onChange={setTranspose}
+              />
+              {hideToolbarBtn}
+              {fullscreenBtn}
+            </div>
+            <div className="zoom-controls">
+              <button className="zoom-step" onClick={zoomOut} disabled={userZoom <= ZOOM_MIN} aria-label="Zoom out">−</button>
+              <span className="zoom-pct">{Math.round(userZoom * 100)}%</span>
+              <button className="zoom-step" onClick={zoomIn} disabled={userZoom >= ZOOM_MAX} aria-label="Zoom in">+</button>
+              <div className="zoom-divider" />
+              <button className={`zoom-btn${userZoom === 1 ? ' active' : ''}`} onClick={fitWidth}>Fit Width</button>
+              <button className="zoom-btn" onClick={fitToPage} disabled={status !== 'ready'}>Fit Page</button>
+            </div>
+          </div>
+        ) : (
+          <div className="media-tools">
+            <span className="media-tools-label">Key</span>
+            <div className="key-toggle">
+              {keysForType.map(k => (
+                <button
+                  key={k}
+                  className={`key-btn${selectedKey === k ? ' active' : ''}`}
+                  onClick={() => setSelectedKey(k)}
+                >
+                  {keyLabel(k)}
+                </button>
+              ))}
+            </div>
+            <div style={{ flex: 1 }} />
+            {hideToolbarBtn}
+            {fullscreenBtn}
+          </div>
+        )}
+      </div>
+
+      {isFullscreen && !toolbarVisible && (
+        <div
+          className="toolbar-reveal-strip"
+          onClick={() => setToolbarVisible(true)}
+          role="button"
+          tabIndex={0}
+          aria-label="Show controls"
+          onKeyDown={e => e.key === 'Enter' && setToolbarVisible(true)}
+        />
       )}
 
       {status === 'loading' && (

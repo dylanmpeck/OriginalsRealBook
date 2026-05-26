@@ -146,7 +146,8 @@
   border-bottom: 1px solid #2a2a4a;
 }
 
-.btn-fullscreen {
+.btn-fullscreen,
+.btn-hide-toolbar {
   background: #1a1a2e;
   border: none;
   border-left: 1px solid #2a2a4a;
@@ -161,13 +162,56 @@
   transition: color 0.15s, background 0.15s;
 }
 
-.btn-fullscreen:hover {
+.btn-fullscreen:hover,
+.btn-hide-toolbar:hover {
   color: #e0e0ff;
   background: #22224a;
 }
 
-.media-tools .btn-fullscreen {
-  margin-left: auto;
+/* Fullscreen: make controls sticky so they stay visible while scrolling */
+.chart-viewer:fullscreen .viewer-controls {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.viewer-controls.controls-hidden {
+  display: none;
+}
+
+/* Thin strip at top of fullscreen that expands on hover to reveal the show-controls prompt */
+.toolbar-reveal-strip {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: 6px;
+  cursor: pointer;
+  background: rgba(26, 26, 46, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: height 0.18s ease, background 0.18s ease;
+}
+
+.toolbar-reveal-strip:hover {
+  height: 36px;
+  background: rgba(26, 26, 46, 0.92);
+}
+
+.toolbar-reveal-strip::after {
+  content: '▾  Show controls';
+  color: #8888aa;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  opacity: 0;
+  transition: opacity 0.1s 0.08s;
+  white-space: nowrap;
+}
+
+.toolbar-reveal-strip:hover::after {
+  opacity: 1;
 }
 
 .media-tools-label {
