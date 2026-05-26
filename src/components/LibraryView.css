@@ -134,12 +134,50 @@
   text-overflow: ellipsis;
 }
 
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .card-composer {
   font-size: 0.8rem;
   color: var(--accent);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.card-file-types {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.file-type-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1.5;
+}
+
+.file-type-tag-musicxml {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+
+.file-type-tag-pdf {
+  background: color-mix(in srgb, #e07b39 15%, transparent);
+  color: #c4602a;
+}
+
+.file-type-tag-image {
+  background: color-mix(in srgb, #3aaa6e 15%, transparent);
+  color: #2a8a55;
 }
 
 .card-formats {

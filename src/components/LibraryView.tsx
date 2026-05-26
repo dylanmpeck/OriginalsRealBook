@@ -43,6 +43,10 @@ function formatLabel(type: FormatType): string {
   return type === 'musicxml' ? 'MusicXML' : type === 'pdf' ? 'PDF' : 'Image'
 }
 
+function formatShortLabel(type: FormatType): string {
+  return type === 'musicxml' ? 'MXL' : type === 'pdf' ? 'PDF' : 'IMG'
+}
+
 function keyLabel(key: ChartKey): string {
   return key.replace('b', '♭')
 }
@@ -221,7 +225,16 @@ export default function LibraryView({ user, onOpen }: Props) {
             >
               <div className="card-body">
                 <p className="card-title">{c.title}</p>
-                {c.composer && <p className="card-composer">{c.composer}</p>}
+                <div className="card-meta">
+                  {c.composer && <span className="card-composer">{c.composer}</span>}
+                  <div className="card-file-types">
+                    {[...new Set(c.formats.map(f => f.type))].map(type => (
+                      <span key={type} className={`file-type-tag file-type-tag-${type}`}>
+                        {formatShortLabel(type)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
                 <div className="card-formats">
                   {c.formats.map(f => (
                     <span key={f.storagePath} className={`format-badge format-badge-${f.type}`}>
