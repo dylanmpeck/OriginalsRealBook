@@ -44,15 +44,97 @@
   to { transform: rotate(360deg); }
 }
 
-.xml-tools {
+.xml-tools-main {
   display: flex;
   align-items: stretch;
   border-bottom: 1px solid #2a2a4a;
 }
 
-.xml-tools .transpose-control {
+.xml-tools-main .transpose-control {
   flex: 1;
   border-bottom: none;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: #1a1a2e;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+.zoom-step {
+  background: none;
+  border: 1px solid #3a3a5a;
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  color: #8888aa;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.zoom-step:hover:not(:disabled) {
+  border-color: #6666cc;
+  color: #c0c0ee;
+}
+
+.zoom-step:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.zoom-pct {
+  font-size: 11px;
+  color: #8888aa;
+  min-width: 34px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.zoom-divider {
+  width: 1px;
+  height: 14px;
+  background: #2a2a4a;
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.zoom-btn {
+  background: none;
+  border: 1px solid #3a3a5a;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8888aa;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.zoom-btn:hover:not(:disabled) {
+  border-color: #6666cc;
+  color: #c0c0ee;
+}
+
+.zoom-btn.active {
+  background: #6666cc;
+  border-color: #6666cc;
+  color: #fff;
+}
+
+.zoom-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 .media-tools {
@@ -192,10 +274,9 @@
 }
 
 .osmd-container svg {
-  /* On desktop: scale down to fit the container if the render width exceeded it.
-     On mobile: min-width keeps notes readable; .chart-viewer scrolls horizontally. */
-  width: 100% !important;
-  min-width: 900px;
+  /* --music-zoom: set via inline style; 1 = fit to width, >1 scrolls horizontally, <1 shrinks */
+  width: calc(100% * var(--music-zoom, 1)) !important;
+  min-width: calc(900px * min(1, var(--music-zoom, 1)));
   height: auto !important;
   background: #fff;
   color-scheme: only light;
@@ -218,6 +299,3 @@
   min-height: calc(100vh - 37px);
 }
 
-.chart-viewer:fullscreen .osmd-container svg {
-  min-width: unset;
-}

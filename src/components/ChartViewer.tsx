@@ -98,6 +98,7 @@ export default function ChartViewer({ chart }: Props) {
   const [status, setStatus] = useState<Status>('loading')
   const [errorMsg, setErrorMsg] = useState('')
   const [transpose, setTranspose] = useState(0)
+  const [userZoom, setUserZoom] = useState(1)
 
   const viewerRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -117,6 +118,26 @@ export default function ChartViewer({ chart }: Props) {
     } else {
       viewerRef.current.requestFullscreen()
     }
+  }
+
+  const ZOOM_STEP = 0.1
+  const ZOOM_MIN = 0.25
+  const ZOOM_MAX = 2.5
+
+  function zoomIn() { setUserZoom(z => Math.min(ZOOM_MAX, parseFloat((z + ZOOM_STEP).toFixed(2)))) }
+  function zoomOut() { setUserZoom(z => Math.max(ZOOM_MIN, parseFloat((z - ZOOM_STEP).toFixed(2)))) }
+  function fitWidth() { setUserZoom(1) }
+  function fitToPage() {
+    if (!containerRef.current) return
+    const svg = containerRef.current.querySelector('svg')
+    if (!svg) return
+    const svgRect = svg.getBoundingClientRect()
+    if (svgRect.height <= 0) return
+    const naturalH = svgRect.height / userZoom
+    // Available height = from the SVG's current top edge to the bottom of the viewport
+    const availableH = window.innerHeight - svgRect.top
+    const newZoom = Math.min(1, availableH / naturalH)
+    setUserZoom(Math.max(ZOOM_MIN, parseFloat(newZoom.toFixed(2))))
   }
 
   const isXml = selectedType === 'musicxml'
@@ -248,12 +269,22 @@ export default function ChartViewer({ chart }: Props) {
 
       {isXml ? (
         <div className="xml-tools">
-          <TransposeControl
-            originalFifths={originalFifths}
-            transpose={transpose}
-            onChange={setTranspose}
-          />
-          {fullscreenBtn}
+          <div className="xml-tools-main">
+            <TransposeControl
+              originalFifths={originalFifths}
+              transpose={transpose}
+              onChange={setTranspose}
+            />
+            {fullscreenBtn}
+          </div>
+          <div className="zoom-controls">
+            <button className="zoom-step" onClick={zoomOut} disabled={userZoom <= ZOOM_MIN} aria-label="Zoom out">−</button>
+            <span className="zoom-pct">{Math.round(userZoom * 100)}%</span>
+            <button className="zoom-step" onClick={zoomIn} disabled={userZoom >= ZOOM_MAX} aria-label="Zoom in">+</button>
+            <div className="zoom-divider" />
+            <button className={`zoom-btn${userZoom === 1 ? ' active' : ''}`} onClick={fitWidth}>Fit Width</button>
+            <button className="zoom-btn" onClick={fitToPage} disabled={status !== 'ready'}>Fit Page</button>
+          </div>
         </div>
       ) : (
         <div className="media-tools">
@@ -303,7 +334,7 @@ export default function ChartViewer({ chart }: Props) {
         ref={containerRef}
         className="osmd-container"
         style={isXml
-          ? { visibility: status === 'ready' ? 'visible' : 'hidden' }
+          ? { visibility: status === 'ready' ? 'visible' : 'hidden', '--music-zoom': userZoom } as React.CSSProperties
           : { display: 'none' }
         }
       />
