@@ -63,22 +63,44 @@ interface Props {
 type Status = 'loading' | 'ready' | 'error'
 
 export default function ChartViewer({ chart }: Props) {
+  const availableParts = useMemo(() => {
+    const seen = new Set<string>()
+    const parts: string[] = []
+    for (const f of chart.formats) {
+      if (!seen.has(f.part)) { seen.add(f.part); parts.push(f.part) }
+    }
+    return parts
+  }, [chart.formats])
+
+  const [selectedPart, setSelectedPart] = useState<string>(availableParts[0] ?? 'Lead Sheet')
+
+  const formatsForPart = useMemo(
+    () => chart.formats.filter(f => f.part === selectedPart),
+    [chart.formats, selectedPart]
+  )
+
   const availableTypes = useMemo(() => {
     const seen = new Set<FormatType>()
     const types: FormatType[] = []
-    for (const f of chart.formats) {
+    for (const f of formatsForPart) {
       if (!seen.has(f.type)) { seen.add(f.type); types.push(f.type) }
     }
     return types
-  }, [chart.formats])
+  }, [formatsForPart])
 
   const defaultType: FormatType = availableTypes.includes('musicxml') ? 'musicxml' : availableTypes[0]
   const [selectedType, setSelectedType] = useState<FormatType>(defaultType)
   const [selectedKey, setSelectedKey] = useState<ChartKey>('C')
 
+  // When selected part changes, reset type to first available for that part
+  useEffect(() => {
+    const firstType = availableTypes.includes('musicxml') ? 'musicxml' : availableTypes[0]
+    if (firstType) setSelectedType(firstType)
+  }, [selectedPart]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const formatsOfType = useMemo(
-    () => chart.formats.filter(f => f.type === selectedType),
-    [chart.formats, selectedType]
+    () => formatsForPart.filter(f => f.type === selectedType),
+    [formatsForPart, selectedType]
   )
 
   // When the selected type changes, snap to the first available key for that type
@@ -272,6 +294,22 @@ export default function ChartViewer({ chart }: Props) {
   return (
     <div className="chart-viewer" ref={viewerRef}>
       <div className={`viewer-controls${isFullscreen && !toolbarVisible ? ' controls-hidden' : ''}`}>
+        {availableParts.length > 1 && (
+          <div className="part-selector">
+            <label className="part-selector-label" htmlFor="part-select">Part</label>
+            <select
+              id="part-select"
+              className="part-select"
+              value={selectedPart}
+              onChange={e => setSelectedPart(e.target.value)}
+            >
+              {availableParts.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {availableTypes.length > 1 && (
           <div className="format-tabs">
             {availableTypes.map(type => (

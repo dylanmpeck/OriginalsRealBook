@@ -14,6 +14,7 @@ export interface ChartFormat {
   storagePath: string
   uploadedAt: Date
   key?: ChartKey
+  part: string
 }
 
 export interface ChartDoc {
@@ -30,6 +31,7 @@ export interface UploadFormat {
   file: File
   extractedXml?: string
   key?: ChartKey
+  part: string
 }
 
 export function parseChartMeta(xml: string): { title: string; composer: string } {
@@ -56,6 +58,7 @@ function normalizeDoc(id: string, data: Record<string, any>): ChartDoc {
       formats: (data.formats as any[]).map(f => ({
         ...f,
         uploadedAt: (f.uploadedAt as Timestamp).toDate(),
+        part: f.part || 'Lead Sheet',
       })),
     }
   }
@@ -71,6 +74,7 @@ function normalizeDoc(id: string, data: Record<string, any>): ChartDoc {
       filename: data.filename,
       storagePath: data.storagePath,
       uploadedAt: (data.uploadedAt as Timestamp).toDate(),
+      part: 'Lead Sheet',
     }],
   }
 }
@@ -90,6 +94,7 @@ function formatEntry(format: UploadFormat, storagePath: string) {
     filename: format.file.name,
     storagePath,
     uploadedAt: Timestamp.now(),
+    part: format.part,
     ...(format.key !== undefined && { key: format.key }),
   }
 }
@@ -156,6 +161,7 @@ export async function deleteFormat(chart: ChartDoc, format: ChartFormat): Promis
       filename: f.filename,
       storagePath: f.storagePath,
       uploadedAt: Timestamp.fromDate(f.uploadedAt),
+      part: f.part,
       ...(f.key !== undefined && { key: f.key }),
     })),
   })

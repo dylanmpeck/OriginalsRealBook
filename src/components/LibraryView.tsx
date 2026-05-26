@@ -14,6 +14,19 @@ interface Props {
 
 const CHART_KEYS: ChartKey[] = ['C', 'Bb', 'Eb']
 
+const COMMON_PARTS = [
+  'Lead Sheet',
+  'Trumpet (Bb)',
+  'Alto Sax (Eb)',
+  'Tenor Sax (Bb)',
+  'Trombone',
+  'Bass',
+  'Piano',
+  'Guitar',
+  'Drum Set',
+  'Full Score',
+]
+
 interface PendingUpload {
   file: File
   extractedXml?: string
@@ -23,6 +36,7 @@ interface PendingUpload {
   matchingChart: ChartDoc | null
   addToExisting: boolean
   key: ChartKey
+  part: string
 }
 
 function formatLabel(type: FormatType): string {
@@ -92,7 +106,7 @@ export default function LibraryView({ user, onOpen }: Props) {
         ? charts.find(c => c.title.toLowerCase() === title.toLowerCase()) ?? null
         : null
 
-      setPending({ file, extractedXml, formatType, title, composer, matchingChart, addToExisting: matchingChart !== null, key: 'C' })
+      setPending({ file, extractedXml, formatType, title, composer, matchingChart, addToExisting: matchingChart !== null, key: 'C', part: 'Lead Sheet' })
     } catch (err) {
       setUploadError(`Failed to read file: ${(err as Error).message}`)
     }
@@ -101,13 +115,14 @@ export default function LibraryView({ user, onOpen }: Props) {
   async function confirmUpload() {
     if (!pending) return
     setUploading(true)
-    const { file, extractedXml, formatType, title, composer, matchingChart, addToExisting, key } = pending
+    const { file, extractedXml, formatType, title, composer, matchingChart, addToExisting, key, part } = pending
     setPending(null)
     try {
       const format: UploadFormat = {
         type: formatType,
         file,
         extractedXml,
+        part,
         ...(formatType !== 'musicxml' && { key }),
       }
       if (addToExisting && matchingChart) {
@@ -134,7 +149,7 @@ export default function LibraryView({ user, onOpen }: Props) {
 
   async function handleDeleteFormat(c: ChartDoc, f: ChartFormat, e: React.MouseEvent) {
     e.stopPropagation()
-    const label = `${formatLabel(f.type)}${f.key ? ` (${keyLabel(f.key)})` : ''}`
+    const label = `${f.part}${f.key ? ` (${keyLabel(f.key)})` : ''}`
     const msg = c.formats.length === 1
       ? `Delete the ${label} version? This is the only version — the chart will be removed entirely.`
       : `Delete the ${label} version?`
@@ -210,11 +225,11 @@ export default function LibraryView({ user, onOpen }: Props) {
                 <div className="card-formats">
                   {c.formats.map(f => (
                     <span key={f.storagePath} className={`format-badge format-badge-${f.type}`}>
-                      {formatLabel(f.type)}{f.key ? ` · ${keyLabel(f.key)}` : ''}
+                      {f.part}{f.key ? ` · ${keyLabel(f.key)}` : ''}
                       <button
                         className="btn-delete-format"
                         onClick={e => handleDeleteFormat(c, f, e)}
-                        title={`Delete ${formatLabel(f.type)}${f.key ? ` (${keyLabel(f.key)})` : ''} version`}
+                        title={`Delete ${f.part}${f.key ? ` (${keyLabel(f.key)})` : ''} version`}
                         aria-label="Delete this version"
                       >
                         ×
@@ -317,6 +332,21 @@ export default function LibraryView({ user, onOpen }: Props) {
                 </div>
               </label>
             )}
+
+            <label className="modal-label">
+              Part
+              <input
+                className="modal-input"
+                type="text"
+                list="common-parts"
+                value={pending.part}
+                onChange={e => setPending(p => p && { ...p, part: e.target.value })}
+                placeholder="Lead Sheet"
+              />
+              <datalist id="common-parts">
+                {COMMON_PARTS.map(p => <option key={p} value={p} />)}
+              </datalist>
+            </label>
 
             <div className="modal-actions">
               <button className="btn-cancel" onClick={() => setPending(null)}>Cancel</button>
