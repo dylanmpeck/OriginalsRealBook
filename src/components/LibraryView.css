@@ -4,6 +4,27 @@
   gap: 24px;
 }
 
+.library {
+  position: relative;
+}
+
+.library.drag-over::after {
+  content: 'Drop to upload';
+  position: absolute;
+  inset: 0;
+  border: 2px dashed var(--accent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent);
+  pointer-events: none;
+  z-index: 10;
+}
+
 .library-header {
   display: flex;
   align-items: center;

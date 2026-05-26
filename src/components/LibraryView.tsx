@@ -59,7 +59,9 @@ export default function LibraryView({ user, onOpen }: Props) {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [pending, setPending] = useState<PendingUpload | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dragCounter = useRef(0)
 
   const filtered = searchQuery.trim()
     ? charts.filter(c => {
@@ -165,8 +167,34 @@ export default function LibraryView({ user, onOpen }: Props) {
     }
   }
 
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault()
+    dragCounter.current++
+    if (dragCounter.current === 1) setIsDragOver(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    dragCounter.current--
+    if (dragCounter.current === 0) setIsDragOver(false)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    dragCounter.current = 0
+    setIsDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(file)
+  }
+
   return (
-    <div className="library">
+    <div
+      className={`library${isDragOver ? ' drag-over' : ''}`}
+      onDragEnter={handleDragEnter}
+      onDragOver={e => e.preventDefault()}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className="library-header">
         <h2 className="library-title">Chart Library</h2>
         <button
