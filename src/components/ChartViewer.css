@@ -75,6 +75,7 @@
   line-height: 1;
   color: #8888aa;
   cursor: pointer;
+  touch-action: manipulation;
   transition: border-color 0.15s, color 0.15s;
   display: flex;
   align-items: center;
@@ -117,6 +118,7 @@
   font-weight: 600;
   color: #8888aa;
   cursor: pointer;
+  touch-action: manipulation;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   white-space: nowrap;
 }

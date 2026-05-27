@@ -37,7 +37,7 @@ interface Props {
 export default function PdfViewer({ url }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const canvasesRef = useRef<(HTMLCanvasElement | null)[]>([])
-  const renderCancelRef = useRef(false)
+  const activeTasksRef = useRef<{ cancel(): void }[]>([])
   const lastFitWidthRef = useRef(0)
 
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null)
@@ -47,6 +47,16 @@ export default function PdfViewer({ url }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  function cancelActiveTasks() {
+    activeTasksRef.current.forEach(t => { try { t.cancel() } catch { /* already done */ } })
+    activeTasksRef.current = []
+  }
+
+  // Release canvas pixel buffers (frees WebKit memory immediately rather than waiting for GC)
+  function freeCanvases() {
+    canvasesRef.current.forEach(c => { if (c) { c.width = 1; c.height = 1 } })
+  }
+
   // Load PDF when URL changes
   useEffect(() => {
     let cancelled = false
@@ -55,6 +65,8 @@ export default function PdfViewer({ url }: Props) {
     setPdfDoc(null)
     setNumPages(0)
     setFitDone(false)
+    cancelActiveTasks()
+    freeCanvases()
     canvasesRef.current = []
 
     const task = pdfjsLib.getDocument({ url })
@@ -65,7 +77,7 @@ export default function PdfViewer({ url }: Props) {
         setNumPages(doc.numPages)
       })
       .catch(err => {
-        if (cancelled) return  // ignore errors from tasks destroyed during cleanup
+        if (cancelled) return
         setError((err as Error).message ?? 'Failed to load PDF')
         setLoading(false)
       })
@@ -74,6 +86,14 @@ export default function PdfViewer({ url }: Props) {
       task.destroy()
     }
   }, [url])
+
+  // Free canvas memory on unmount
+  useEffect(() => {
+    return () => {
+      cancelActiveTasks()
+      freeCanvases()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto fit-to-width on first load
   useEffect(() => {
@@ -108,36 +128,55 @@ export default function PdfViewer({ url }: Props) {
   useEffect(() => {
     if (!pdfDoc || !fitDone || numPages === 0) return
 
-    renderCancelRef.current = true  // cancel any in-progress render
+    cancelActiveTasks()
     const cancelled = { value: false }
-    renderCancelRef.current = false
-
     setLoading(true)
 
     async function renderAll() {
+      // Render at device pixel ratio for crisp display on retina/high-DPI screens.
+      // canvas.style.width/height set the CSS display size; canvas.width/height set resolution.
+      const dpr = window.devicePixelRatio || 1
       for (let i = 0; i < numPages; i++) {
         if (cancelled.value) return
         const canvas = canvasesRef.current[i]
         if (!canvas) continue
 
-        const page = await pdfDoc!.getPage(i + 1)
-        if (cancelled.value) return
+        try {
+          const page = await pdfDoc!.getPage(i + 1)
+          if (cancelled.value) return
 
-        const viewport = page.getViewport({ scale })
-        canvas.width = Math.floor(viewport.width)
-        canvas.height = Math.floor(viewport.height)
-        const ctx = canvas.getContext('2d')
-        if (!ctx) continue
+          const viewport = page.getViewport({ scale: scale * dpr })
+          const cssW = Math.floor(viewport.width / dpr)
+          const cssH = Math.floor(viewport.height / dpr)
+          canvas.width = Math.floor(viewport.width)
+          canvas.height = Math.floor(viewport.height)
+          canvas.style.width = cssW + 'px'
+          canvas.style.height = cssH + 'px'
 
-        const task = page.render({ canvasContext: ctx, viewport, canvas })
-        try { await task.promise } catch { /* cancelled */ }
+          const ctx = canvas.getContext('2d')
+          if (!ctx) continue
+
+          const task = page.render({ canvasContext: ctx, viewport, canvas })
+          activeTasksRef.current.push(task)
+          try {
+            await task.promise
+          } finally {
+            activeTasksRef.current = activeTasksRef.current.filter(t => t !== task)
+          }
+        } catch {
+          if (cancelled.value) return
+          // skip bad page, continue with the rest
+        }
       }
       if (!cancelled.value) setLoading(false)
     }
 
     renderAll()
-    return () => { cancelled.value = true }
-  }, [pdfDoc, scale, numPages, fitDone])
+    return () => {
+      cancelled.value = true
+      cancelActiveTasks()
+    }
+  }, [pdfDoc, scale, numPages, fitDone]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fitToWidth = useCallback(() => {
     if (!pdfDoc || !wrapperRef.current) return
