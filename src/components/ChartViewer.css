@@ -316,12 +316,38 @@
   font-weight: 500;
 }
 
-.pdf-viewer {
-  width: 100%;
-  height: 80vh;
-  min-height: 600px;
-  border: none;
+.pdf-js-viewer {
+  display: flex;
+  flex-direction: column;
+}
+
+.pdf-js-pages {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  overflow-x: auto;
+  min-height: 400px;
+  position: relative;
+}
+
+.pdf-js-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.pdf-js-page {
   display: block;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  max-width: 100%;
 }
 
 .image-viewer {

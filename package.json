@@ -12,6 +12,7 @@
     "fflate": "^0.8.3",
     "firebase": "^12.13.0",
     "opensheetmusicdisplay": "^1.8.9",
+    "pdfjs-dist": "^5.7.284",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

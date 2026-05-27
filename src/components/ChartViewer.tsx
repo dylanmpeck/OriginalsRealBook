@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay'
 import { transposeXml, getKeyFifths } from '../utils/transposeXml'
 import { getChartXml, getChartFileUrl, type ChartDoc, type ChartKey, type FormatType } from '../lib/charts'
 import TransposeControl from './TransposeControl'
+const PdfViewer = lazy(() => import('./PdfViewer'))
 import './ChartViewer.css'
 
 const OSMD_OPTIONS = {
@@ -409,7 +410,9 @@ export default function ChartViewer({ chart }: Props) {
       )}
 
       {selectedType === 'pdf' && fileUrl && status === 'ready' && (
-        <iframe className="pdf-viewer" src={fileUrl} title="PDF chart" />
+        <Suspense fallback={<div className="chart-status"><div className="spinner" /><span>Loading PDF viewer…</span></div>}>
+          <PdfViewer url={fileUrl} />
+        </Suspense>
       )}
 
       {selectedType === 'image' && fileUrl && status === 'ready' && (
