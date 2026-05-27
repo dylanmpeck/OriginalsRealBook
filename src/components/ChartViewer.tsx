@@ -128,7 +128,10 @@ export default function ChartViewer({ chart }: Props) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [toolbarVisible, setToolbarVisible] = useState(true)
 
+  const supportsNativeFullscreen = !!document.fullscreenEnabled
+
   useEffect(() => {
+    if (!supportsNativeFullscreen) return
     const onChange = () => {
       const fs = !!document.fullscreenElement
       setIsFullscreen(fs)
@@ -136,14 +139,29 @@ export default function ChartViewer({ chart }: Props) {
     }
     document.addEventListener('fullscreenchange', onChange)
     return () => document.removeEventListener('fullscreenchange', onChange)
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Lock body scroll when using simulated fullscreen on mobile
+  useEffect(() => {
+    if (!supportsNativeFullscreen && isFullscreen) {
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = '' }
+    }
+  }, [isFullscreen, supportsNativeFullscreen])
 
   function toggleFullscreen() {
     if (!viewerRef.current) return
-    if (document.fullscreenElement) {
-      document.exitFullscreen()
+    if (supportsNativeFullscreen) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen()
+      } else {
+        viewerRef.current.requestFullscreen()
+      }
     } else {
-      viewerRef.current.requestFullscreen()
+      setIsFullscreen(prev => {
+        if (prev) setToolbarVisible(true)
+        return !prev
+      })
     }
   }
 
@@ -292,7 +310,7 @@ export default function ChartViewer({ chart }: Props) {
   ) : null
 
   return (
-    <div className="chart-viewer" ref={viewerRef}>
+    <div className={`chart-viewer${!supportsNativeFullscreen && isFullscreen ? ' simulated-fullscreen' : ''}`} ref={viewerRef}>
       <div className={`viewer-controls${isFullscreen && !toolbarVisible ? ' controls-hidden' : ''}`}>
         {availableParts.length > 1 && (
           <div className="part-selector">

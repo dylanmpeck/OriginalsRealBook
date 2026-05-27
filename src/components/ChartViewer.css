@@ -358,7 +358,7 @@
   color-scheme: only light;
 }
 
-/* Fullscreen mode */
+/* Fullscreen mode — native */
 .chart-viewer:fullscreen {
   border-radius: 0;
   overflow-y: auto;
@@ -373,5 +373,31 @@
 
 .chart-viewer:fullscreen .image-viewer {
   min-height: calc(100vh - 37px);
+}
+
+/* Fullscreen mode — simulated (mobile / iOS Safari) */
+.chart-viewer.simulated-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  border-radius: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-shadow: none;
+}
+
+.chart-viewer.simulated-fullscreen .viewer-controls {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.chart-viewer.simulated-fullscreen .pdf-viewer {
+  height: calc(100dvh - 37px);
+  min-height: unset;
+}
+
+.chart-viewer.simulated-fullscreen .image-viewer {
+  min-height: calc(100dvh - 37px);
 }
 
