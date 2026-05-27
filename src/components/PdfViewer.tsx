@@ -133,9 +133,6 @@ export default function PdfViewer({ url }: Props) {
     setLoading(true)
 
     async function renderAll() {
-      // Render at device pixel ratio for crisp display on retina/high-DPI screens.
-      // canvas.style.width/height set the CSS display size; canvas.width/height set resolution.
-      const dpr = window.devicePixelRatio || 1
       for (let i = 0; i < numPages; i++) {
         if (cancelled.value) return
         const canvas = canvasesRef.current[i]
@@ -145,11 +142,13 @@ export default function PdfViewer({ url }: Props) {
           const page = await pdfDoc!.getPage(i + 1)
           if (cancelled.value) return
 
-          const viewport = page.getViewport({ scale: scale * dpr })
-          const cssW = Math.floor(viewport.width / dpr)
-          const cssH = Math.floor(viewport.height / dpr)
-          canvas.width = Math.floor(viewport.width)
-          canvas.height = Math.floor(viewport.height)
+          const viewport = page.getViewport({ scale })
+          const cssW = Math.floor(viewport.width)
+          const cssH = Math.floor(viewport.height)
+          // Set explicit CSS size so zoom changes are always visually reflected.
+          // Rendering at CSS scale (not DPR) keeps canvas buffers small enough for iPad.
+          canvas.width = cssW
+          canvas.height = cssH
           canvas.style.width = cssW + 'px'
           canvas.style.height = cssH + 'px'
 
