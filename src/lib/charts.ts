@@ -103,15 +103,16 @@ export async function uploadChart(
   uid: string,
   meta: { title: string; composer: string },
   format: UploadFormat,
-): Promise<void> {
+): Promise<string> {
   const storagePath = await uploadFormatFile(format)
-  await addDoc(collection(db, 'charts'), {
+  const docRef = await addDoc(collection(db, 'charts'), {
     title: meta.title || format.file.name,
     composer: meta.composer,
     uploadedAt: Timestamp.now(),
     uploadedBy: uid,
     formats: [formatEntry(format, storagePath)],
   })
+  return docRef.id
 }
 
 export async function addFormatToChart(
