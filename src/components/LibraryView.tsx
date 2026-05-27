@@ -51,6 +51,32 @@ function keyLabel(key: ChartKey): string {
   return key.replace('b', '♭')
 }
 
+function predictBatchTitle(files: File[]): string {
+  if (files.length < 2) return ''
+  const basenames = files.map(f => f.name.replace(/\.[^.]+$/, ''))
+
+  let prefix = basenames[0]
+  for (const name of basenames.slice(1)) {
+    while (!name.startsWith(prefix)) prefix = prefix.slice(0, -1)
+    if (!prefix) break
+  }
+
+  let suffix = basenames[0]
+  for (const name of basenames.slice(1)) {
+    while (!name.endsWith(suffix)) suffix = suffix.slice(1)
+    if (!suffix) break
+  }
+
+  const clean = (s: string) => s.replace(/^[\s\-_–—.,|:()\[\]]+|[\s\-_–—.,|:()\[\]]+$/g, '').trim()
+  const cleanPrefix = clean(prefix)
+  const cleanSuffix = clean(suffix)
+
+  const MIN_LEN = 3
+  if (cleanPrefix.length >= MIN_LEN && cleanPrefix.length >= cleanSuffix.length) return cleanPrefix
+  if (cleanSuffix.length >= MIN_LEN) return cleanSuffix
+  return ''
+}
+
 
 export default function LibraryView({ user, onOpen }: Props) {
   const [charts, setCharts] = useState<ChartDoc[]>([])
@@ -100,19 +126,15 @@ export default function LibraryView({ user, onOpen }: Props) {
     setUploadError(null)
     const skipped: string[] = []
     const items: PendingUpload[] = []
-    // Track titles already in this batch (not yet in DB) for intra-batch collision detection
-    const batchTitles = new Map<string, ChartDoc>()
 
+    // First pass: extract file type and XML metadata
     for (const file of files) {
       const lower = file.name.toLowerCase()
       const isXml = ['.xml', '.musicxml', '.mxl'].some(ext => lower.endsWith(ext))
       const isPdf = lower.endsWith('.pdf')
       const isImage = ['.png', '.jpg', '.jpeg', '.gif', '.webp'].some(ext => lower.endsWith(ext))
 
-      if (!isXml && !isPdf && !isImage) {
-        skipped.push(file.name)
-        continue
-      }
+      if (!isXml && !isPdf && !isImage) { skipped.push(file.name); continue }
 
       let extractedXml: string | undefined
       let title = ''
@@ -121,9 +143,7 @@ export default function LibraryView({ user, onOpen }: Props) {
 
       try {
         if (isXml) {
-          extractedXml = lower.endsWith('.mxl')
-            ? await extractXmlFromMxl(file)
-            : await file.text()
+          extractedXml = lower.endsWith('.mxl') ? await extractXmlFromMxl(file) : await file.text()
           const meta = parseChartMeta(extractedXml)
           title = meta.title
           composer = meta.composer
@@ -131,18 +151,33 @@ export default function LibraryView({ user, onOpen }: Props) {
         } else {
           formatType = isPdf ? 'pdf' : 'image'
         }
-
-        const key = title.trim().toLowerCase()
-        // Check DB first, then earlier items in this same batch
-        const matchingChart = key
-          ? (charts.find(c => c.title.toLowerCase() === key) ?? batchTitles.get(key) ?? null)
-          : null
-
-        if (key && !matchingChart) batchTitles.set(key, { id: `batch:${key}`, title, composer, formats: [], uploadedAt: new Date(), uploadedBy: user.uid })
-
-        items.push({ file, extractedXml, formatType, title, composer, matchingChart, addToExisting: matchingChart !== null, key: 'C', part: 'Lead Sheet' })
+        items.push({ file, extractedXml, formatType, title, composer, matchingChart: null, addToExisting: false, key: 'C', part: 'Lead Sheet' })
       } catch (err) {
         skipped.push(`${file.name} (${(err as Error).message})`)
+      }
+    }
+
+    // Predict title from filenames for items that have no title (PDFs/images)
+    if (items.length > 1) {
+      const predicted = predictBatchTitle(items.map(i => i.file))
+      if (predicted) {
+        for (const item of items) {
+          if (!item.title) item.title = predicted
+        }
+      }
+    }
+
+    // Second pass: compute matchingChart and intra-batch grouping based on final titles
+    const batchTitles = new Map<string, ChartDoc>()
+    for (const item of items) {
+      const key = item.title.trim().toLowerCase()
+      const matchingChart = key
+        ? (charts.find(c => c.title.toLowerCase() === key) ?? batchTitles.get(key) ?? null)
+        : null
+      item.matchingChart = matchingChart
+      item.addToExisting = matchingChart !== null
+      if (key && !matchingChart) {
+        batchTitles.set(key, { id: `batch:${key}`, title: item.title, composer: item.composer, formats: [], uploadedAt: new Date(), uploadedBy: user.uid })
       }
     }
 
