@@ -51,6 +51,27 @@ function keyLabel(key: ChartKey): string {
   return key.replace('b', '♭')
 }
 
+const PART_PATTERNS: Array<{ pattern: RegExp; part: string }> = [
+  { pattern: /\balto(\s*sax(ophone)?)?\b/i,          part: 'Alto Sax (Eb)' },
+  { pattern: /\btenor(\s*sax(ophone)?)?\b/i,         part: 'Tenor Sax (Bb)' },
+  { pattern: /\b(trumpet|tpt|trpt)\b/i,              part: 'Trumpet (Bb)' },
+  { pattern: /\b(trombone|tbn)\b/i,                  part: 'Trombone' },
+  { pattern: /\b(drums?|drum\s*(set|kit)|perc(ussion)?)\b/i, part: 'Drum Set' },
+  { pattern: /\bfull\s*score\b/i,                    part: 'Full Score' },
+  { pattern: /\blead\s*sheet\b/i,                    part: 'Lead Sheet' },
+  { pattern: /\b(piano|keys?|keyboard)\b/i,          part: 'Piano' },
+  { pattern: /\b(guitar|gtr)\b/i,                    part: 'Guitar' },
+  { pattern: /\bbass\b/i,                            part: 'Bass' },
+]
+
+function predictPartFromFilename(filename: string): string {
+  const basename = filename.replace(/\.[^.]+$/, '')
+  for (const { pattern, part } of PART_PATTERNS) {
+    if (pattern.test(basename)) return part
+  }
+  return 'Lead Sheet'
+}
+
 function predictBatchTitle(files: File[]): string {
   if (files.length < 2) return ''
   const basenames = files.map(f => f.name.replace(/\.[^.]+$/, ''))
@@ -151,7 +172,7 @@ export default function LibraryView({ user, onOpen }: Props) {
         } else {
           formatType = isPdf ? 'pdf' : 'image'
         }
-        items.push({ file, extractedXml, formatType, title, composer, matchingChart: null, addToExisting: false, key: 'C', part: 'Lead Sheet' })
+        items.push({ file, extractedXml, formatType, title, composer, matchingChart: null, addToExisting: false, key: 'C', part: predictPartFromFilename(file.name) })
       } catch (err) {
         skipped.push(`${file.name} (${(err as Error).message})`)
       }
