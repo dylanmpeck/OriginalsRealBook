@@ -11,6 +11,20 @@ const ZOOM_STEP = 0.15
 const ZOOM_MIN = 0.25
 const ZOOM_MAX = 3.0
 
+// Returns the nearest scrollable ancestor and its scroll offset.
+// In normal mode this is window; in simulated fullscreen it's the chart-viewer div.
+function getScrollContainer(el: HTMLElement): { scrollTop: number; height: number } {
+  let parent = el.parentElement
+  while (parent && parent !== document.documentElement) {
+    const { overflowY } = getComputedStyle(parent)
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+      return { scrollTop: parent.scrollTop, height: parent.clientHeight }
+    }
+    parent = parent.parentElement
+  }
+  return { scrollTop: window.scrollY, height: window.innerHeight }
+}
+
 interface Props {
   url: string
 }
@@ -59,9 +73,9 @@ export default function PdfViewer({ url }: Props) {
   useEffect(() => {
     if (!pdfDoc || fitDone) return
     pdfDoc.getPage(1).then(page => {
-      const containerW = wrapperRef.current?.offsetWidth || 800
+      const contentW = (wrapperRef.current?.clientWidth ?? 0) - 32 || 800
       const vp = page.getViewport({ scale: 1 })
-      setScale(containerW / vp.width)
+      setScale(contentW / vp.width)
       setFitDone(true)
     })
   }, [pdfDoc, fitDone])
@@ -104,21 +118,21 @@ export default function PdfViewer({ url }: Props) {
   const fitToWidth = useCallback(() => {
     if (!pdfDoc || !wrapperRef.current) return
     pdfDoc.getPage(1).then(page => {
-      const containerW = wrapperRef.current!.offsetWidth || 800
-      setScale(containerW / page.getViewport({ scale: 1 }).width)
+      const contentW = (wrapperRef.current!.clientWidth - 32) || 800
+      setScale(contentW / page.getViewport({ scale: 1 }).width)
     })
   }, [pdfDoc])
 
   const fitToPage = useCallback(() => {
     if (!pdfDoc || !wrapperRef.current) return
     pdfDoc.getPage(1).then(page => {
+      const { scrollTop, height: containerH } = getScrollContainer(wrapperRef.current!)
       const rect = wrapperRef.current!.getBoundingClientRect()
-      // Use scroll-invariant distance so the result is the same regardless of
-      // how far the user has scrolled through the document.
-      const wrapperTopInDoc = rect.top + window.scrollY
-      const availH = window.innerHeight - wrapperTopInDoc
+      const wrapperTopInContainer = rect.top + scrollTop
+      const availH = containerH - wrapperTopInContainer
       const vp = page.getViewport({ scale: 1 })
-      const fitW = (wrapperRef.current!.offsetWidth || 800) / vp.width
+      const contentW = (wrapperRef.current!.clientWidth - 32) || 800
+      const fitW = contentW / vp.width
       const fitH = availH / vp.height
       setScale(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.min(fitW, fitH))))
     })
