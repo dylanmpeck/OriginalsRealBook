@@ -112,12 +112,15 @@ export default function PdfViewer({ url }: Props) {
   const fitToPage = useCallback(() => {
     if (!pdfDoc || !wrapperRef.current) return
     pdfDoc.getPage(1).then(page => {
-      const { top } = wrapperRef.current!.getBoundingClientRect()
-      const availH = window.innerHeight - top
+      const rect = wrapperRef.current!.getBoundingClientRect()
+      // Use scroll-invariant distance so the result is the same regardless of
+      // how far the user has scrolled through the document.
+      const wrapperTopInDoc = rect.top + window.scrollY
+      const availH = window.innerHeight - wrapperTopInDoc
       const vp = page.getViewport({ scale: 1 })
       const fitW = (wrapperRef.current!.offsetWidth || 800) / vp.width
       const fitH = availH / vp.height
-      setScale(Math.min(fitW, fitH))
+      setScale(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.min(fitW, fitH))))
     })
   }, [pdfDoc])
 
