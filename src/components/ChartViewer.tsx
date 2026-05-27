@@ -385,14 +385,26 @@ export default function ChartViewer({ chart }: Props) {
       </div>
 
       {isFullscreen && !toolbarVisible && (
-        <div
-          className="toolbar-reveal-strip"
-          onClick={() => setToolbarVisible(true)}
-          role="button"
-          tabIndex={0}
-          aria-label="Show controls"
-          onKeyDown={e => e.key === 'Enter' && setToolbarVisible(true)}
-        />
+        <>
+          <div
+            className="toolbar-reveal-strip"
+            onClick={() => setToolbarVisible(true)}
+            role="button"
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+          <button
+            className="show-controls-fab"
+            onClick={() => setToolbarVisible(true)}
+            aria-label="Show controls"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+        </>
       )}
 
       {status === 'loading' && (
