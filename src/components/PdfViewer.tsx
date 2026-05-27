@@ -13,12 +13,17 @@ const ZOOM_MAX = 3.0
 
 // Returns the nearest scrollable ancestor and its scroll offset.
 // In normal mode this is window; in simulated fullscreen it's the chart-viewer div.
+// Only counts an element as the scroll container if it actually constrains height
+// (scrollHeight > clientHeight). Elements that grow to fit their content have equal
+// scrollHeight and clientHeight and are skipped so we fall through to window.
 function getScrollContainer(el: HTMLElement): { scrollTop: number; height: number } {
   let parent = el.parentElement
   while (parent && parent !== document.documentElement) {
     const { overflowY } = getComputedStyle(parent)
     if (overflowY === 'auto' || overflowY === 'scroll') {
-      return { scrollTop: parent.scrollTop, height: parent.clientHeight }
+      if (parent.scrollHeight > parent.clientHeight) {
+        return { scrollTop: parent.scrollTop, height: parent.clientHeight }
+      }
     }
     parent = parent.parentElement
   }
