@@ -22,6 +22,7 @@
   align-items: baseline;
   gap: 10px;
   flex: 1;
+  min-width: 0;
 }
 
 .header-user {
@@ -159,6 +160,22 @@
 }
 
 @media (max-width: 600px) {
+  .app-header {
+    padding: 0 12px;
+  }
+
+  .logo {
+    font-size: 1rem;
+  }
+
+  .logo-sub {
+    display: none;
+  }
+
+  .user-email {
+    display: none;
+  }
+
   .app-main {
     padding: 20px 12px;
   }
