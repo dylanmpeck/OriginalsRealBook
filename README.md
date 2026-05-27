@@ -6,15 +6,21 @@ A web app for sharing and practicing original jazz compositions within a small m
 
 ## Features
 
+### Library
 - **Multi-format chart library** — upload MusicXML, PDF, or image files for each piece
 - **Multi-part support** — attach multiple parts to a single chart (Lead Sheet, Trumpet, Alto Sax, Trombone, Bass, etc.) and switch between them in the viewer
 - **Per-key versioning** — store separate versions of a chart in different transpositions (C, B♭, E♭) for different instruments
+- **Batch upload** — drag and drop or select multiple files at once; the app detects a shared title from common filename prefixes/suffixes, infers the part name from keywords in the filename (e.g. "Alto" → Alto Sax, "Drums" → Drum Set), and groups same-title files into one chart automatically
+- **Drag-and-drop upload** — drop files anywhere on the library view to start the upload flow
+- **Live search** — filter charts by title or composer instantly
+- **Google authentication** — access is gated behind sign-in so the library stays private to the group
+
+### Viewer
 - **MusicXML rendering** — sheet music renders directly in the browser via OpenSheetMusicDisplay, with no plugins required
 - **Key transposition** — transpose any MusicXML chart up or down in real time without re-uploading
 - **Zoom & fit controls** — zoom in/out, fit to container width, or fit the full page to the viewport
-- **Fullscreen mode** — collapse the toolbar and fill the screen with music during rehearsal
-- **Live library search** — filter charts by title or composer instantly
-- **Google authentication** — access is gated behind sign-in so the library stays private to the group
+- **Fullscreen mode** — fills the entire screen with music; uses the native Fullscreen API on desktop and a simulated fixed-position overlay on iOS/mobile where the API is unavailable
+- **Collapsible toolbar** — hide the controls in fullscreen for a clean view; a hover strip at the top reveals them again
 
 ## Tech Stack
 
@@ -34,6 +40,8 @@ A web app for sharing and practicing original jazz compositions within a small m
 Charts are stored as Firestore documents containing metadata (title, composer, upload date) and an array of format entries. Each format entry references a file in Firebase Storage and carries its type (`musicxml`, `pdf`, or `image`), the part name, and an optional key. This schema allows a single chart to accumulate multiple parts and transpositions over time without duplicating top-level documents.
 
 MusicXML files are rendered client-side by OSMD. Transposition is applied by manipulating the XML's `<key>` and note pitch elements before passing the document to OSMD, avoiding a round-trip to any server.
+
+Batch uploads group files by their target chart at confirm time — the first file in a new-chart group creates the Firestore document and returns its ID, and subsequent files in the group are added via `arrayUnion` using that ID. This ensures multiple parts uploaded together land in the same chart even before any of them exist in the database.
 
 ## Local Development
 
