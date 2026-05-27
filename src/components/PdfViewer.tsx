@@ -33,6 +33,7 @@ export default function PdfViewer({ url }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const canvasesRef = useRef<(HTMLCanvasElement | null)[]>([])
   const renderCancelRef = useRef(false)
+  const lastFitWidthRef = useRef(0)
 
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null)
   const [numPages, setNumPages] = useState(0)
@@ -74,11 +75,29 @@ export default function PdfViewer({ url }: Props) {
     if (!pdfDoc || fitDone) return
     pdfDoc.getPage(1).then(page => {
       const contentW = (wrapperRef.current?.clientWidth ?? 0) - 32 || 800
+      lastFitWidthRef.current = contentW
       const vp = page.getViewport({ scale: 1 })
       setScale(contentW / vp.width)
       setFitDone(true)
     })
   }, [pdfDoc, fitDone])
+
+  // Re-fit to width when the container resizes (e.g. entering/exiting fullscreen)
+  useEffect(() => {
+    if (!fitDone || !wrapperRef.current || !pdfDoc) return
+    const el = wrapperRef.current
+    const observer = new ResizeObserver(entries => {
+      const newW = entries[0]?.contentRect.width ?? 0
+      if (newW > 0 && Math.abs(newW - lastFitWidthRef.current) > 4) {
+        lastFitWidthRef.current = newW
+        pdfDoc.getPage(1).then(page => {
+          setScale(newW / page.getViewport({ scale: 1 }).width)
+        })
+      }
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [fitDone, pdfDoc])
 
   // Render all pages whenever scale or doc changes
   useEffect(() => {
