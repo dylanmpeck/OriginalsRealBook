@@ -99,7 +99,8 @@ export default function PdfViewer({ url }: Props) {
   useEffect(() => {
     if (!pdfDoc || fitDone) return
     pdfDoc.getPage(1).then(page => {
-      const contentW = (wrapperRef.current?.clientWidth ?? 0) - 32 || 800
+      // getBoundingClientRect gives a fresh layout value, not a cached one
+      const contentW = (wrapperRef.current?.getBoundingClientRect().width ?? 32) - 32 || 800
       lastFitWidthRef.current = contentW
       const vp = page.getViewport({ scale: 1 })
       setScale(contentW / vp.width)
@@ -111,17 +112,31 @@ export default function PdfViewer({ url }: Props) {
   useEffect(() => {
     if (!fitDone || !wrapperRef.current || !pdfDoc) return
     const el = wrapperRef.current
-    const observer = new ResizeObserver(entries => {
-      const newW = entries[0]?.contentRect.width ?? 0
+
+    function refit(newW: number) {
       if (newW > 0 && Math.abs(newW - lastFitWidthRef.current) > 4) {
         lastFitWidthRef.current = newW
-        pdfDoc.getPage(1).then(page => {
+        pdfDoc!.getPage(1).then(page => {
           setScale(newW / page.getViewport({ scale: 1 }).width)
         })
       }
+    }
+
+    // ResizeObserver handles fullscreen transitions and desktop window resize
+    const observer = new ResizeObserver(entries => {
+      refit(entries[0]?.contentRect.width ?? 0)
     })
     observer.observe(el)
-    return () => observer.disconnect()
+
+    // window resize fires after iOS finishes updating layout on orientation change,
+    // which is more reliable than ResizeObserver for device rotation
+    const onWindowResize = () => refit(el.getBoundingClientRect().width - 32)
+    window.addEventListener('resize', onWindowResize)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', onWindowResize)
+    }
   }, [fitDone, pdfDoc])
 
   // Render all pages whenever scale or doc changes
@@ -180,7 +195,7 @@ export default function PdfViewer({ url }: Props) {
   const fitToWidth = useCallback(() => {
     if (!pdfDoc || !wrapperRef.current) return
     pdfDoc.getPage(1).then(page => {
-      const contentW = (wrapperRef.current!.clientWidth - 32) || 800
+      const contentW = wrapperRef.current!.getBoundingClientRect().width - 32 || 800
       setScale(contentW / page.getViewport({ scale: 1 }).width)
     })
   }, [pdfDoc])
@@ -193,7 +208,7 @@ export default function PdfViewer({ url }: Props) {
       const wrapperTopInContainer = rect.top + scrollTop
       const availH = containerH - wrapperTopInContainer
       const vp = page.getViewport({ scale: 1 })
-      const contentW = (wrapperRef.current!.clientWidth - 32) || 800
+      const contentW = rect.width - 32 || 800
       const fitW = contentW / vp.width
       const fitH = availH / vp.height
       setScale(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.min(fitW, fitH))))
