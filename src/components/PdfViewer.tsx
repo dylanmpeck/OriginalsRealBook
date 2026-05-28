@@ -52,7 +52,7 @@ export default function PdfViewer({ url }: Props) {
     activeTasksRef.current = []
   }
 
-  // Release canvas pixel buffers (frees WebKit memory immediately rather than waiting for GC)
+  // Release canvas pixel buffers to free WebKit memory immediately rather than waiting for GC
   function freeCanvases() {
     canvasesRef.current.forEach(c => { if (c) { c.width = 1; c.height = 1 } })
   }
@@ -99,7 +99,6 @@ export default function PdfViewer({ url }: Props) {
   useEffect(() => {
     if (!pdfDoc || fitDone) return
     pdfDoc.getPage(1).then(page => {
-      // getBoundingClientRect gives a fresh layout value, not a cached one
       const contentW = (wrapperRef.current?.getBoundingClientRect().width ?? 32) - 32 || 800
       lastFitWidthRef.current = contentW
       const vp = page.getViewport({ scale: 1 })
@@ -108,7 +107,7 @@ export default function PdfViewer({ url }: Props) {
     })
   }, [pdfDoc, fitDone])
 
-  // Re-fit to width when the container resizes (e.g. entering/exiting fullscreen)
+  // Re-fit to width when container resizes (fullscreen transitions, orientation change)
   useEffect(() => {
     if (!fitDone || !wrapperRef.current || !pdfDoc) return
     const el = wrapperRef.current
@@ -123,71 +122,111 @@ export default function PdfViewer({ url }: Props) {
     }
 
     // ResizeObserver handles fullscreen transitions and desktop window resize
-    const observer = new ResizeObserver(entries => {
+    const resizeObserver = new ResizeObserver(entries => {
       refit(entries[0]?.contentRect.width ?? 0)
     })
-    observer.observe(el)
+    resizeObserver.observe(el)
 
-    // window resize fires after iOS finishes updating layout on orientation change,
+    // window resize fires after iOS fully settles layout on orientation change,
     // which is more reliable than ResizeObserver for device rotation
     const onWindowResize = () => refit(el.getBoundingClientRect().width - 32)
     window.addEventListener('resize', onWindowResize)
 
     return () => {
-      observer.disconnect()
+      resizeObserver.disconnect()
       window.removeEventListener('resize', onWindowResize)
     }
   }, [fitDone, pdfDoc])
 
-  // Render all pages whenever scale or doc changes
+  // Lazy render: reserve layout space for all pages up front, then render each page
+  // only when it scrolls into the viewport, and free its pixel buffer when it scrolls out.
+  // This caps total canvas memory at ~2-3 visible pages regardless of PDF length,
+  // preventing the OOM crash seen on iPad with multi-page PDFs.
   useEffect(() => {
     if (!pdfDoc || !fitDone || numPages === 0) return
 
     cancelActiveTasks()
     const cancelled = { value: false }
+    let intersectionObserver: IntersectionObserver | null = null
     setLoading(true)
 
-    async function renderAll() {
+    async function renderPage(index: number) {
+      if (cancelled.value) return
+      const canvas = canvasesRef.current[index]
+      if (!canvas) return
+      try {
+        const page = await pdfDoc!.getPage(index + 1)
+        if (cancelled.value) return
+        const viewport = page.getViewport({ scale })
+        canvas.width = Math.floor(viewport.width)
+        canvas.height = Math.floor(viewport.height)
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        const task = page.render({ canvasContext: ctx, viewport, canvas })
+        activeTasksRef.current.push(task)
+        try {
+          await task.promise
+          if (!cancelled.value) canvas.style.visibility = 'visible'
+        } finally {
+          activeTasksRef.current = activeTasksRef.current.filter(t => t !== task)
+        }
+      } catch {
+        // skip bad page
+      }
+    }
+
+    function freePage(index: number) {
+      const canvas = canvasesRef.current[index]
+      if (canvas) {
+        canvas.width = 1
+        canvas.height = 1
+        canvas.style.visibility = 'hidden'
+      }
+    }
+
+    // Phase 1: load dimensions for all pages and set canvas CSS sizes so the
+    // scroll container has the correct total height before any pixels are drawn.
+    // Phase 2: start IntersectionObserver to draw pages as they enter the viewport.
+    async function init() {
       for (let i = 0; i < numPages; i++) {
         if (cancelled.value) return
         const canvas = canvasesRef.current[i]
         if (!canvas) continue
-
-        try {
-          const page = await pdfDoc!.getPage(i + 1)
-          if (cancelled.value) return
-
-          const viewport = page.getViewport({ scale })
-          const cssW = Math.floor(viewport.width)
-          const cssH = Math.floor(viewport.height)
-          // Set explicit CSS size so zoom changes are always visually reflected.
-          // Rendering at CSS scale (not DPR) keeps canvas buffers small enough for iPad.
-          canvas.width = cssW
-          canvas.height = cssH
-          canvas.style.width = cssW + 'px'
-          canvas.style.height = cssH + 'px'
-
-          const ctx = canvas.getContext('2d')
-          if (!ctx) continue
-
-          const task = page.render({ canvasContext: ctx, viewport, canvas })
-          activeTasksRef.current.push(task)
-          try {
-            await task.promise
-          } finally {
-            activeTasksRef.current = activeTasksRef.current.filter(t => t !== task)
-          }
-        } catch {
-          if (cancelled.value) return
-          // skip bad page, continue with the rest
-        }
+        const page = await pdfDoc!.getPage(i + 1)
+        if (cancelled.value) return
+        const vp = page.getViewport({ scale })
+        canvas.style.width = Math.floor(vp.width) + 'px'
+        canvas.style.height = Math.floor(vp.height) + 'px'
+        canvas.style.visibility = 'hidden'
+        canvas.width = 1
+        canvas.height = 1
       }
-      if (!cancelled.value) setLoading(false)
+      if (cancelled.value) return
+
+      setLoading(false)
+
+      intersectionObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          const idx = parseInt((entry.target as HTMLElement).dataset.pageIdx ?? '-1')
+          if (idx < 0) return
+          if (entry.isIntersecting) renderPage(idx)
+          else freePage(idx)
+        })
+      }, { rootMargin: '200px 0px' })
+
+      canvasesRef.current.forEach((canvas, i) => {
+        if (canvas) {
+          canvas.dataset.pageIdx = String(i)
+          intersectionObserver!.observe(canvas)
+        }
+      })
     }
 
-    renderAll()
+    init()
+
     return () => {
       cancelled.value = true
+      intersectionObserver?.disconnect()
       cancelActiveTasks()
     }
   }, [pdfDoc, scale, numPages, fitDone]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -247,7 +286,6 @@ export default function PdfViewer({ url }: Props) {
             key={i}
             ref={el => { canvasesRef.current[i] = el }}
             className="pdf-js-page"
-            style={{ visibility: loading ? 'hidden' : 'visible' }}
           />
         ))}
       </div>
