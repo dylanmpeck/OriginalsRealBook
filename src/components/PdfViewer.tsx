@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import pdfWorkerUrl from '../pdf-worker-with-polyfills.js?worker&url'
 
-// Vite copies the worker file to the build output via the ?url import above.
-// This avoids CDN dependencies and works in both dev and prod.
+// Bundled worker that includes polyfills for Safari < 18.4 (URL.parse, Promise.try).
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 const ZOOM_STEP = 0.15
