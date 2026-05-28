@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import * as pdfjsLib from 'pdfjs-dist'
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.min.mjs'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorkerUrl from '../pdf-worker-with-polyfills.js?worker&url'
 
